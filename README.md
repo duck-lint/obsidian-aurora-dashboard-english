@@ -59,8 +59,9 @@ cells use a dashed outline and can be disabled in settings.
 
 ### Community plugin directory
 
-After the plugin is accepted into the Obsidian Community plugin directory, it
-can be installed from **Settings → Community plugins → Browse**.
+Install **Aurora Dashboard** from **Settings → Community plugins → Browse**, or
+open its [Obsidian Community listing](https://community.obsidian.md/plugins/aurora-dashboard)
+and choose **Add to Obsidian**.
 
 ## Commands
 
