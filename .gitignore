@@ -1,0 +1,7 @@
+node_modules/
+main.js
+*.map
+.DS_Store
+design-qa.md
+docs/*
+!docs/aurora-dashboard-preview.png

@@ -1,0 +1,92 @@
+import type { TFile } from "obsidian";
+
+export type StartupMode = "replace-active" | "new-tab";
+
+export interface AuroraSettings {
+  displayName: string;
+  openOnStartup: boolean;
+  startupMode: StartupMode;
+  shortNoteWordThreshold: number;
+  excludedFolders: string[];
+  showEstimatedHistory: boolean;
+  activityHistoryDays: number;
+}
+
+export interface ActivityEntry {
+  addedWords: number;
+  edits: number;
+  paths: string[];
+}
+
+export interface AuroraPluginData {
+  settings: AuroraSettings;
+  activity: Record<string, ActivityEntry>;
+  fileWordCounts: Record<string, number>;
+  trackingStartedAt: number | null;
+}
+
+export interface OpenTask {
+  line: number;
+  text: string;
+}
+
+export interface NoteMetric {
+  file: TFile;
+  words: number;
+  backlinks: number;
+  outgoingLinks: number;
+  tasks: OpenTask[];
+}
+
+export interface DailyActivity {
+  date: string;
+  addedWords: number;
+  edits: number;
+  estimated: boolean;
+  files: TFile[];
+}
+
+export interface FolderSummary {
+  path: string;
+  name: string;
+  noteCount: number;
+  wordCount: number;
+  files: TFile[];
+}
+
+export interface DashboardSnapshot {
+  generatedAt: number;
+  notes: NoteMetric[];
+  noteCount: number;
+  totalWords: number;
+  unlinkedNotes: NoteMetric[];
+  shortNotes: NoteMetric[];
+  taskNotes: NoteMetric[];
+  recentNotes: NoteMetric[];
+  modifiedToday: number;
+  activity: DailyActivity[];
+  trend: DailyActivity[];
+  folders: FolderSummary[];
+}
+
+export interface AuroraDataStore {
+  data: AuroraPluginData;
+  requestDataSave(): void;
+}
+
+export const DEFAULT_SETTINGS: AuroraSettings = {
+  displayName: "",
+  openOnStartup: true,
+  startupMode: "replace-active",
+  shortNoteWordThreshold: 10,
+  excludedFolders: [],
+  showEstimatedHistory: true,
+  activityHistoryDays: 365
+};
+
+export const DEFAULT_DATA: AuroraPluginData = {
+  settings: DEFAULT_SETTINGS,
+  activity: {},
+  fileWordCounts: {},
+  trackingStartedAt: null
+};

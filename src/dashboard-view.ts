@@ -1,0 +1,834 @@
+import { ItemView, setIcon } from "obsidian";
+import type { WorkspaceLeaf } from "obsidian";
+import {
+  activityLevel,
+  formatCompactNumber,
+  localDateKey
+} from "./core";
+import { DetailModal, type DetailItem } from "./detail-modal";
+import type AuroraDashboardPlugin from "./main";
+import type {
+  DailyActivity,
+  DashboardSnapshot,
+  NoteMetric
+} from "./models";
+import { AuroraSettingsModal } from "./settings";
+
+export const VIEW_TYPE_AURORA_DASHBOARD = "aurora-dashboard-view";
+
+export class AuroraDashboardView extends ItemView {
+  private refreshTimer: number | null = null;
+  private renderDisposers: Array<() => void> = [];
+
+  constructor(
+    leaf: WorkspaceLeaf,
+    private readonly plugin: AuroraDashboardPlugin
+  ) {
+    super(leaf);
+  }
+
+  getViewType(): string {
+    return VIEW_TYPE_AURORA_DASHBOARD;
+  }
+
+  getDisplayText(): string {
+    return "Aurora Dashboard";
+  }
+
+  getIcon(): string {
+    return "layout-dashboard";
+  }
+
+  async onOpen(): Promise<void> {
+    this.contentEl.addClass("aurora-dashboard-view-content");
+    this.renderLoading();
+    await this.refresh(true);
+  }
+
+  onClose(): Promise<void> {
+    this.clearRenderResources();
+    if (this.refreshTimer !== null) {
+      window.clearTimeout(this.refreshTimer);
+      this.refreshTimer = null;
+    }
+    return Promise.resolve();
+  }
+
+  requestRefresh(): void {
+    if (this.refreshTimer !== null) {
+      window.clearTimeout(this.refreshTimer);
+    }
+    this.refreshTimer = window.setTimeout(() => {
+      this.refreshTimer = null;
+      void this.refresh();
+    }, 900);
+  }
+
+  async refresh(force = false): Promise<void> {
+    try {
+      const snapshot = await this.plugin.stats.scan(force);
+      this.render(snapshot);
+    } catch (error) {
+      this.renderError(error);
+    }
+  }
+
+  private renderLoading(): void {
+    this.contentEl.empty();
+    const root = this.contentEl.createDiv(
+      "aurora-dashboard aurora-dashboard-loading"
+    );
+    const mark = root.createDiv("aurora-loading-mark");
+    setIcon(mark, "loader-circle");
+    root.createEl("h2", { text: "正在扫描知识库" });
+    root.createEl("p", { text: "首次统计可能需要几秒钟。" });
+  }
+
+  private renderError(error: unknown): void {
+    this.clearRenderResources();
+    this.contentEl.empty();
+    const root = this.contentEl.createDiv(
+      "aurora-dashboard aurora-dashboard-error"
+    );
+    const mark = root.createDiv("aurora-error-mark");
+    setIcon(mark, "circle-alert");
+    root.createEl("h2", { text: "暂时无法生成首页" });
+    root.createEl("p", {
+      text: error instanceof Error ? error.message : "发生未知错误"
+    });
+    const retry = root.createEl("button", {
+      cls: "mod-cta",
+      text: "重新扫描",
+      attr: { type: "button" }
+    });
+    retry.addEventListener("click", () => void this.refresh(true));
+  }
+
+  private render(snapshot: DashboardSnapshot): void {
+    this.clearRenderResources();
+    this.contentEl.empty();
+    const root = this.contentEl.createDiv("aurora-dashboard");
+
+    this.renderHeader(root, snapshot);
+    this.renderMetrics(root, snapshot);
+
+    const heroGrid = root.createDiv("aurora-dashboard-grid aurora-hero-grid");
+    const activitySurface = this.createSurface(
+      heroGrid,
+      "写作活动",
+      this.activitySubtitle()
+    );
+    activitySurface.addClass("aurora-activity-surface");
+    this.renderHeatmap(activitySurface, snapshot);
+
+    const issuesSurface = this.createSurface(
+      heroGrid,
+      "待整理",
+      "点击查看具体笔记"
+    );
+    issuesSurface.addClass("aurora-issues-surface");
+    this.renderIssues(issuesSurface, snapshot);
+
+    const lowerGrid = root.createDiv("aurora-dashboard-grid aurora-lower-grid");
+    const trendSurface = this.createSurface(
+      lowerGrid,
+      "每日新增字数",
+      "过去 30 天"
+    );
+    trendSurface.addClass("aurora-trend-surface");
+    this.renderTrendChart(trendSurface, snapshot.trend);
+
+    const recentSurface = this.createSurface(
+      lowerGrid,
+      "最近笔记",
+      `${snapshot.modifiedToday} 篇今日修改`
+    );
+    recentSurface.addClass("aurora-recent-surface");
+    this.renderRecentNotes(recentSurface, snapshot);
+
+    const structureSurface = this.createSurface(
+      root,
+      "文件结构",
+      "按一级目录统计 Markdown 笔记"
+    );
+    structureSurface.addClass("aurora-structure-surface");
+    this.renderStructure(structureSurface, snapshot);
+
+    const footer = root.createDiv("aurora-dashboard-footer");
+    const scope = footer.createSpan({
+      text: `统计范围：${snapshot.noteCount} 篇 Markdown 笔记`
+    });
+    scope.setAttr("aria-label", "统计范围");
+    footer.createSpan({
+      text: this.plugin.data.settings.showEstimatedHistory
+        ? "虚线方格表示安装前估算数据"
+        : "仅显示安装后的精确活动"
+    });
+  }
+
+  private renderHeader(
+    root: HTMLElement,
+    snapshot: DashboardSnapshot
+  ): void {
+    const header = root.createDiv("aurora-dashboard-header");
+    const copy = header.createDiv("aurora-dashboard-heading");
+    const displayName = this.plugin.data.settings.displayName;
+    copy.createEl("h1", {
+      text: `${greeting()}${displayName ? `，${displayName}` : ""}`
+    });
+    copy.createEl("p", {
+      text: `${this.app.vault.getName()} · ${snapshot.noteCount} 篇笔记 · ${formatUpdatedTime(snapshot.generatedAt)}`
+    });
+
+    const actions = header.createDiv("aurora-dashboard-actions");
+    const refresh = this.createIconButton(actions, "refresh-cw", "重新扫描");
+    this.listen(refresh, "click", () => {
+      refresh.addClass("is-spinning");
+      void this.refresh(true).finally(() => refresh.removeClass("is-spinning"));
+    });
+    const settings = this.createIconButton(actions, "settings", "打开设置");
+    this.listen(settings, "click", () => {
+      new AuroraSettingsModal(this.app, this.plugin).open();
+    });
+  }
+
+  private renderMetrics(root: HTMLElement, snapshot: DashboardSnapshot): void {
+    const metrics = root.createDiv("aurora-metrics");
+    this.createMetricCard(
+      metrics,
+      "files",
+      formatCompactNumber(snapshot.noteCount),
+      "笔记",
+      "accent-blue",
+      () =>
+        this.openDetails(
+          "全部笔记",
+          "按最近修改时间排序",
+          [...snapshot.notes]
+            .sort((a, b) => b.file.stat.mtime - a.file.stat.mtime)
+            .map((note) => noteDetail(note, `${note.words} 字`))
+        )
+    );
+    this.createMetricCard(
+      metrics,
+      "type",
+      formatCompactNumber(snapshot.totalWords),
+      "总字数",
+      "accent-green",
+      () =>
+        this.openDetails(
+          "字数明细",
+          "中文字符与其他语言词组按可读文本统计",
+          [...snapshot.notes]
+            .sort((a, b) => b.words - a.words)
+            .map((note) => noteDetail(note, `${note.words} 字`))
+        )
+    );
+    this.createMetricCard(
+      metrics,
+      "link",
+      formatCompactNumber(snapshot.unlinkedNotes.length),
+      "待连接",
+      "accent-yellow",
+      () =>
+        this.openDetails(
+          "无反向链接笔记",
+          "这些笔记尚未被其他笔记引用",
+          snapshot.unlinkedNotes.map((note) =>
+            noteDetail(note, `${note.outgoingLinks} 个出链`)
+          )
+        )
+    );
+    this.createMetricCard(
+      metrics,
+      "file-warning",
+      formatCompactNumber(snapshot.shortNotes.length),
+      "空白或极短",
+      "accent-purple",
+      () =>
+        this.openDetails(
+          "空白或极短笔记",
+          `当前阈值：不超过 ${this.plugin.data.settings.shortNoteWordThreshold} 字`,
+          snapshot.shortNotes.map((note) =>
+            noteDetail(note, `${note.words} 字`)
+          )
+        )
+    );
+  }
+
+  private renderHeatmap(
+    surface: HTMLElement,
+    snapshot: DashboardSnapshot
+  ): void {
+    const values = snapshot.activity
+      .map((day) => day.addedWords)
+      .filter((value) => value > 0)
+      .sort((a, b) => a - b);
+    const max =
+      values[Math.max(0, Math.floor(values.length * 0.9) - 1)] ??
+      values.at(-1) ??
+      1;
+    const body = surface.createDiv("aurora-heatmap-body");
+    const weekdayLabels = body.createDiv("aurora-heatmap-weekdays");
+    weekdayLabels.createSpan({ text: "" });
+    weekdayLabels.createSpan({ text: "一" });
+    weekdayLabels.createSpan({ text: "" });
+    weekdayLabels.createSpan({ text: "三" });
+    weekdayLabels.createSpan({ text: "" });
+    weekdayLabels.createSpan({ text: "五" });
+    weekdayLabels.createSpan({ text: "" });
+
+    const content = body.createDiv("aurora-heatmap-content");
+    const monthLabels = content.createDiv("aurora-heatmap-months");
+    monthNamesForRange(snapshot.activity).forEach((month) => {
+      monthLabels.createSpan({ text: month });
+    });
+
+    const grid = content.createDiv("aurora-heatmap-grid");
+    const firstDate = snapshot.activity[0]?.date;
+    if (firstDate) {
+      const firstDay = new Date(`${firstDate}T00:00:00`).getDay();
+      for (let index = 0; index < firstDay; index += 1) {
+        grid.createSpan("aurora-heatmap-placeholder");
+      }
+    }
+    const today = localDateKey(new Date());
+    snapshot.activity.forEach((day) => {
+      const cell = grid.createEl("button", {
+        cls: "aurora-heatmap-cell",
+        attr: {
+          type: "button",
+          "aria-label": activityAriaLabel(day)
+        }
+      });
+      cell.dataset.level = String(activityLevel(day.addedWords, max));
+      if (day.estimated) cell.addClass("is-estimated");
+      if (day.date === today) cell.addClass("is-today");
+      this.listen(cell, "click", () =>
+        this.openActivityDay(day)
+      );
+    });
+
+    const legend = surface.createDiv("aurora-heatmap-legend");
+    legend.createSpan({ text: "少" });
+    for (let level = 0; level <= 5; level += 1) {
+      const swatch = legend.createSpan("aurora-heatmap-swatch");
+      swatch.dataset.level = String(level);
+    }
+    legend.createSpan({ text: "多" });
+  }
+
+  private renderIssues(
+    surface: HTMLElement,
+    snapshot: DashboardSnapshot
+  ): void {
+    const list = surface.createDiv("aurora-issue-list");
+    this.createIssueRow(
+      list,
+      "square-check-big",
+      "未完成任务",
+      snapshot.taskNotes.reduce((sum, note) => sum + note.tasks.length, 0),
+      () => {
+        const items = snapshot.taskNotes.flatMap((note) =>
+          note.tasks.map((task) => ({
+            file: note.file,
+            title: task.text,
+            subtitle: note.file.path,
+            badge: `第 ${task.line + 1} 行`
+          }))
+        );
+        this.openDetails(
+          "未完成任务",
+          "点击任务可打开对应笔记",
+          items
+        );
+      }
+    );
+    this.createIssueRow(
+      list,
+      "unlink",
+      "无反向链接笔记",
+      snapshot.unlinkedNotes.length,
+      () =>
+        this.openDetails(
+          "无反向链接笔记",
+          "这些笔记尚未被其他笔记引用",
+          snapshot.unlinkedNotes.map((note) =>
+            noteDetail(note, `${note.outgoingLinks} 个出链`)
+          )
+        )
+    );
+    this.createIssueRow(
+      list,
+      "file-warning",
+      "空白或极短笔记",
+      snapshot.shortNotes.length,
+      () =>
+        this.openDetails(
+          "空白或极短笔记",
+          `当前阈值：不超过 ${this.plugin.data.settings.shortNoteWordThreshold} 字`,
+          snapshot.shortNotes.map((note) =>
+            noteDetail(note, `${note.words} 字`)
+          )
+        )
+    );
+  }
+
+  private renderTrendChart(
+    surface: HTMLElement,
+    trend: DailyActivity[]
+  ): void {
+    const chartWrap = surface.createDiv("aurora-chart-wrap");
+    const canvas = chartWrap.createEl("canvas", {
+      cls: "aurora-trend-chart",
+      attr: { role: "img", "aria-label": "过去 30 天每日新增字数折线图" }
+    });
+    const tooltip = chartWrap.createDiv("aurora-chart-tooltip");
+    tooltip.hide();
+    const draw = (): ChartGeometry =>
+      drawTrendChart(canvas, trend, surface);
+    let geometry = draw();
+    const observer = new ResizeObserver(() => {
+      geometry = draw();
+    });
+    observer.observe(chartWrap);
+    this.renderDisposers.push(() => observer.disconnect());
+
+    this.listen(canvas, "mousemove", (event) => {
+      if (trend.length === 0 || geometry.points.length === 0) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const index = nearestPointIndex(geometry.points, x);
+      const point = geometry.points[index];
+      const day = trend[index];
+      if (!point || !day) return;
+      tooltip.empty();
+      tooltip.createSpan({
+        cls: "aurora-chart-tooltip-date",
+        text: formatDateLabel(day.date)
+      });
+      tooltip.createSpan({
+        text: `${new Intl.NumberFormat("zh-CN").format(day.addedWords)} 字`
+      });
+      tooltip.style.left = `${Math.min(rect.width - 120, Math.max(8, point.x - 42))}px`;
+      tooltip.style.top = `${Math.max(8, point.y - 54)}px`;
+      tooltip.show();
+    });
+    this.listen(canvas, "mouseleave", () => tooltip.hide());
+    this.listen(canvas, "click", (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const index = nearestPointIndex(
+        geometry.points,
+        event.clientX - rect.left
+      );
+      const day = trend[index];
+      if (day) this.openActivityDay(day);
+    });
+
+    const chartFooter = surface.createDiv("aurora-chart-footer");
+    const latest = trend.at(-1);
+    chartFooter.createSpan({
+      text: latest
+        ? `今日 ${new Intl.NumberFormat("zh-CN").format(latest.addedWords)} 字`
+        : "暂无活动"
+    });
+    if (trend.some((day) => day.estimated)) {
+      chartFooter.createSpan({
+        cls: "aurora-estimate-label",
+        text: "含估算历史"
+      });
+    }
+  }
+
+  private renderRecentNotes(
+    surface: HTMLElement,
+    snapshot: DashboardSnapshot
+  ): void {
+    const list = surface.createDiv("aurora-recent-list");
+    if (snapshot.recentNotes.length === 0) {
+      list.createDiv({ cls: "aurora-empty-state", text: "还没有笔记" });
+      return;
+    }
+    snapshot.recentNotes.slice(0, 5).forEach((note) => {
+      const row = list.createEl("button", {
+        cls: "aurora-recent-row",
+        attr: { type: "button" }
+      });
+      const icon = row.createSpan("aurora-recent-icon");
+      setIcon(icon, "file-text");
+      const copy = row.createSpan("aurora-recent-copy");
+      copy.createSpan({
+        cls: "aurora-recent-title",
+        text: note.file.basename
+      });
+      copy.createSpan({
+        cls: "aurora-recent-path",
+        text: note.file.parent?.path ?? "/"
+      });
+      row.createSpan({
+        cls: "aurora-recent-time",
+        text: relativeTime(note.file.stat.mtime)
+      });
+      const arrow = row.createSpan("aurora-row-arrow");
+      setIcon(arrow, "chevron-right");
+      this.listen(row, "click", () => {
+        void this.app.workspace.getLeaf(false).openFile(note.file);
+      });
+    });
+  }
+
+  private renderStructure(
+    surface: HTMLElement,
+    snapshot: DashboardSnapshot
+  ): void {
+    const list = surface.createDiv("aurora-structure-list");
+    const maxCount = snapshot.folders[0]?.noteCount ?? 1;
+    snapshot.folders.slice(0, 8).forEach((folder, index) => {
+      const row = list.createEl("button", {
+        cls: "aurora-structure-row",
+        attr: { type: "button" }
+      });
+      const icon = row.createSpan("aurora-structure-icon");
+      setIcon(icon, "folder");
+      const copy = row.createSpan("aurora-structure-copy");
+      const heading = copy.createSpan("aurora-structure-heading");
+      heading.createSpan({
+        cls: "aurora-structure-name",
+        text: folder.name
+      });
+      heading.createSpan({
+        cls: "aurora-structure-count",
+        text: `${folder.noteCount} 篇`
+      });
+      const bar = copy.createSpan("aurora-structure-bar");
+      const fill = bar.createSpan("aurora-structure-bar-fill");
+      fill.dataset.color = String((index % 5) + 1);
+      fill.style.width = `${Math.max(3, (folder.noteCount / maxCount) * 100)}%`;
+      row.createSpan({
+        cls: "aurora-structure-words",
+        text: `${formatCompactNumber(folder.wordCount)} 字`
+      });
+      const arrow = row.createSpan("aurora-row-arrow");
+      setIcon(arrow, "chevron-right");
+      this.listen(row, "click", () => {
+        const metricsByPath = new Map(
+          snapshot.notes.map((note) => [note.file.path, note])
+        );
+        this.openDetails(
+          folder.name,
+          `${folder.noteCount} 篇笔记 · ${formatCompactNumber(folder.wordCount)} 字`,
+          folder.files.map((file) => {
+            const metric = metricsByPath.get(file.path);
+            return {
+              file,
+              subtitle: file.path,
+              badge: metric ? `${metric.words} 字` : undefined
+            };
+          })
+        );
+      });
+    });
+  }
+
+  private createSurface(
+    parent: HTMLElement,
+    title: string,
+    subtitle: string
+  ): HTMLElement {
+    const surface = parent.createDiv("aurora-surface");
+    const header = surface.createDiv("aurora-surface-header");
+    header.createEl("h2", { text: title });
+    header.createSpan({ text: subtitle });
+    return surface;
+  }
+
+  private createMetricCard(
+    parent: HTMLElement,
+    iconName: string,
+    value: string,
+    label: string,
+    colorClass: string,
+    onClick: () => void
+  ): void {
+    const button = parent.createEl("button", {
+      cls: `aurora-metric ${colorClass}`,
+      attr: { type: "button", "aria-label": `${label}：${value}` }
+    });
+    const icon = button.createSpan("aurora-metric-icon");
+    setIcon(icon, iconName);
+    const copy = button.createSpan("aurora-metric-copy");
+    copy.createSpan({ cls: "aurora-metric-value", text: value });
+    copy.createSpan({ cls: "aurora-metric-label", text: label });
+    const arrow = button.createSpan("aurora-row-arrow");
+    setIcon(arrow, "chevron-right");
+    this.listen(button, "click", onClick);
+  }
+
+  private createIssueRow(
+    parent: HTMLElement,
+    iconName: string,
+    label: string,
+    count: number,
+    onClick: () => void
+  ): void {
+    const row = parent.createEl("button", {
+      cls: "aurora-issue-row",
+      attr: { type: "button" }
+    });
+    const icon = row.createSpan("aurora-issue-icon");
+    setIcon(icon, iconName);
+    row.createSpan({ cls: "aurora-issue-label", text: label });
+    row.createSpan({
+      cls: "aurora-issue-count",
+      text: new Intl.NumberFormat("zh-CN").format(count)
+    });
+    const arrow = row.createSpan("aurora-row-arrow");
+    setIcon(arrow, "chevron-right");
+    this.listen(row, "click", onClick);
+  }
+
+  private createIconButton(
+    parent: HTMLElement,
+    iconName: string,
+    label: string
+  ): HTMLButtonElement {
+    const button = parent.createEl("button", {
+      cls: "aurora-icon-button",
+      attr: { type: "button", "aria-label": label, title: label }
+    });
+    setIcon(button, iconName);
+    return button;
+  }
+
+  private openDetails(
+    title: string,
+    description: string,
+    items: DetailItem[]
+  ): void {
+    new DetailModal(this.app, title, description, items).open();
+  }
+
+  private openActivityDay(day: DailyActivity): void {
+    this.openDetails(
+      formatDateLabel(day.date),
+      `${new Intl.NumberFormat("zh-CN").format(day.addedWords)} 字 · ${day.edits} 次编辑${day.estimated ? " · 估算" : ""}`,
+      day.files.map((file) => ({ file, subtitle: file.path }))
+    );
+  }
+
+  private activitySubtitle(): string {
+    const days = this.plugin.data.settings.activityHistoryDays;
+    if (days >= 365) return "过去 12 个月";
+    if (days >= 180) return "过去 6 个月";
+    return `过去 ${days} 天`;
+  }
+
+  private listen<K extends keyof HTMLElementEventMap>(
+    element: HTMLElement,
+    eventName: K,
+    handler: (event: HTMLElementEventMap[K]) => void
+  ): void {
+    element.addEventListener(eventName, handler);
+    this.renderDisposers.push(() =>
+      element.removeEventListener(eventName, handler)
+    );
+  }
+
+  private clearRenderResources(): void {
+    this.renderDisposers.forEach((dispose) => dispose());
+    this.renderDisposers = [];
+  }
+}
+
+interface ChartPoint {
+  x: number;
+  y: number;
+}
+
+interface ChartGeometry {
+  points: ChartPoint[];
+}
+
+function drawTrendChart(
+  canvas: HTMLCanvasElement,
+  trend: DailyActivity[],
+  tokenRoot: HTMLElement
+): ChartGeometry {
+  const rect = canvas.getBoundingClientRect();
+  const width = Math.max(320, rect.width);
+  const height = Math.max(190, rect.height);
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width = Math.round(width * ratio);
+  canvas.height = Math.round(height * ratio);
+  const context = canvas.getContext("2d");
+  if (!context) return { points: [] };
+  context.setTransform(ratio, 0, 0, ratio, 0, 0);
+  context.clearRect(0, 0, width, height);
+
+  const style = getComputedStyle(tokenRoot);
+  const gridColor =
+    style.getPropertyValue("--aurora-chart-grid").trim() ||
+    "rgba(136, 152, 170, 0.18)";
+  const lineColor =
+    style.getPropertyValue("--aurora-accent-blue").trim() || "#88c0d0";
+  const textColor =
+    style.getPropertyValue("--aurora-text-muted").trim() || "#a3adba";
+  const padding = { top: 18, right: 18, bottom: 30, left: 45 };
+  const plotWidth = width - padding.left - padding.right;
+  const plotHeight = height - padding.top - padding.bottom;
+  const maxValue = Math.max(1, ...trend.map((day) => day.addedWords));
+  const roundedMax = roundChartMax(maxValue);
+
+  context.font =
+    "11px var(--font-interface, -apple-system, BlinkMacSystemFont, sans-serif)";
+  context.textBaseline = "middle";
+  context.strokeStyle = gridColor;
+  context.fillStyle = textColor;
+  context.lineWidth = 1;
+  for (let step = 0; step <= 4; step += 1) {
+    const y = padding.top + (plotHeight / 4) * step;
+    context.beginPath();
+    context.moveTo(padding.left, y);
+    context.lineTo(width - padding.right, y);
+    context.stroke();
+    const value = roundedMax - (roundedMax / 4) * step;
+    context.textAlign = "right";
+    context.fillText(shortAxisNumber(value), padding.left - 9, y);
+  }
+
+  const points = trend.map((day, index) => {
+    const x =
+      padding.left +
+      (trend.length <= 1 ? 0 : (plotWidth * index) / (trend.length - 1));
+    const y =
+      padding.top + plotHeight * (1 - day.addedWords / roundedMax);
+    return { x, y };
+  });
+
+  if (points.length > 0) {
+    context.strokeStyle = lineColor;
+    context.lineWidth = 2;
+    context.lineJoin = "round";
+    context.lineCap = "round";
+    context.beginPath();
+    points.forEach((point, index) => {
+      if (index === 0) context.moveTo(point.x, point.y);
+      else context.lineTo(point.x, point.y);
+    });
+    context.stroke();
+
+    points.forEach((point, index) => {
+      if (index % 3 !== 0 && index !== points.length - 1) return;
+      context.fillStyle = lineColor;
+      context.beginPath();
+      context.arc(point.x, point.y, index === points.length - 1 ? 4 : 2.5, 0, Math.PI * 2);
+      context.fill();
+    });
+  }
+
+  context.fillStyle = textColor;
+  context.textAlign = "center";
+  [0, 7, 14, 21, 29].forEach((index) => {
+    const day = trend[index];
+    const point = points[index];
+    if (!day || !point) return;
+    context.fillText(formatShortDate(day.date), point.x, height - 10);
+  });
+
+  return { points };
+}
+
+function nearestPointIndex(points: ChartPoint[], x: number): number {
+  let bestIndex = 0;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  points.forEach((point, index) => {
+    const distance = Math.abs(point.x - x);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = index;
+    }
+  });
+  return bestIndex;
+}
+
+function roundChartMax(value: number): number {
+  const magnitude = 10 ** Math.floor(Math.log10(value));
+  return Math.ceil(value / magnitude) * magnitude;
+}
+
+function shortAxisNumber(value: number): string {
+  if (value >= 1000) return `${Math.round(value / 1000)}k`;
+  return String(Math.round(value));
+}
+
+function noteDetail(note: NoteMetric, badge?: string): DetailItem {
+  return {
+    file: note.file,
+    title: note.file.basename,
+    subtitle: note.file.path,
+    badge
+  };
+}
+
+function greeting(now = new Date()): string {
+  const hour = now.getHours();
+  if (hour < 6) return "夜深了";
+  if (hour < 11) return "早上好";
+  if (hour < 14) return "中午好";
+  if (hour < 18) return "下午好";
+  return "晚上好";
+}
+
+function formatUpdatedTime(timestamp: number): string {
+  const diff = Date.now() - timestamp;
+  if (diff < 60_000) return "刚刚更新";
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前更新`;
+  return new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(timestamp);
+}
+
+function relativeTime(timestamp: number): string {
+  const diff = Math.max(0, Date.now() - timestamp);
+  if (diff < 60_000) return "刚刚";
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} 小时前`;
+  if (diff < 604_800_000) return `${Math.floor(diff / 86_400_000)} 天前`;
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "numeric",
+    day: "numeric"
+  }).format(timestamp);
+}
+
+function formatDateLabel(date: string): string {
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short"
+  }).format(new Date(`${date}T00:00:00`));
+}
+
+function formatShortDate(date: string): string {
+  const parsed = new Date(`${date}T00:00:00`);
+  return `${parsed.getMonth() + 1}-${parsed.getDate()}`;
+}
+
+function activityAriaLabel(day: DailyActivity): string {
+  const source = day.estimated ? "，估算数据" : "";
+  return `${formatDateLabel(day.date)}，${day.addedWords} 字，${day.edits} 次编辑${source}`;
+}
+
+function monthNamesForRange(activity: DailyActivity[]): string[] {
+  const months: string[] = [];
+  let previous = -1;
+  activity.forEach((day) => {
+    const month = new Date(`${day.date}T00:00:00`).getMonth();
+    if (month !== previous) {
+      months.push(`${month + 1}月`);
+      previous = month;
+    }
+  });
+  return months;
+}

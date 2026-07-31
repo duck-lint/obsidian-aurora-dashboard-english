@@ -1,0 +1,94 @@
+import type { OpenTask } from "./models";
+
+const CJK_PATTERN =
+  /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af]/gu;
+const WORD_PATTERN = /[\p{L}\p{N}]+(?:['’_-][\p{L}\p{N}]+)*/gu;
+
+export function stripMarkdownForCounting(markdown: string): string {
+  return markdown
+    .replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/u, "")
+    .replace(/```[\s\S]*?```/gu, " ")
+    .replace(/~~~[\s\S]*?~~~/gu, " ")
+    .replace(/<!--[\s\S]*?-->/gu, " ")
+    .replace(/!\[\[([^\]]+)\]\]/gu, "$1")
+    .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/gu, "$2")
+    .replace(/\[\[([^\]]+)\]\]/gu, "$1")
+    .replace(/!\[([^\]]*)\]\([^)]*\)/gu, "$1")
+    .replace(/\[([^\]]+)\]\([^)]*\)/gu, "$1")
+    .replace(/https?:\/\/\S+/gu, " ")
+    .replace(/[`*_>#|~=-]/gu, " ");
+}
+
+export function countWords(markdown: string): number {
+  const text = stripMarkdownForCounting(markdown);
+  const cjkCount = text.match(CJK_PATTERN)?.length ?? 0;
+  const withoutCjk = text.replace(CJK_PATTERN, " ");
+  const otherWordCount = withoutCjk.match(WORD_PATTERN)?.length ?? 0;
+  return cjkCount + otherWordCount;
+}
+
+export function extractOpenTasks(markdown: string): OpenTask[] {
+  const tasks: OpenTask[] = [];
+  const lines = markdown.split(/\r?\n/u);
+
+  lines.forEach((line, index) => {
+    const match = line.match(/^\s*[-*+]\s+\[\s\]\s+(.+?)\s*$/u);
+    const text = match?.[1];
+    if (text) {
+      tasks.push({ line: index, text });
+    }
+  });
+
+  return tasks;
+}
+
+export function localDateKey(value: Date | number): string {
+  const date = typeof value === "number" ? new Date(value) : value;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function dayKeysEndingToday(days: number, now = new Date()): string[] {
+  const safeDays = Math.max(1, Math.floor(days));
+  const cursor = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  cursor.setDate(cursor.getDate() - safeDays + 1);
+  const keys: string[] = [];
+
+  for (let index = 0; index < safeDays; index += 1) {
+    keys.push(localDateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return keys;
+}
+
+export function activityLevel(value: number, max: number): number {
+  if (value <= 0 || max <= 0) {
+    return 0;
+  }
+  const ratio = value / max;
+  if (ratio <= 0.08) return 1;
+  if (ratio <= 0.22) return 2;
+  if (ratio <= 0.45) return 3;
+  if (ratio <= 0.72) return 4;
+  return 5;
+}
+
+export function formatCompactNumber(value: number): string {
+  if (value >= 100_000_000) {
+    return `${trimDecimal(value / 100_000_000)} 亿`;
+  }
+  if (value >= 10_000) {
+    return `${trimDecimal(value / 10_000)} 万`;
+  }
+  return new Intl.NumberFormat("zh-CN").format(value);
+}
+
+function trimDecimal(value: number): string {
+  return value
+    .toFixed(value >= 100 ? 0 : value >= 10 ? 1 : 2)
+    .replace(/\.0+$/u, "")
+    .replace(/(\.\d*[1-9])0+$/u, "$1");
+}
