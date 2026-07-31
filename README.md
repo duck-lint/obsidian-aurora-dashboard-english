@@ -4,8 +4,8 @@ A calm, interactive home dashboard for Obsidian. Dashboard turns the current
 vault into a practical overview of tasks, knowledge connections, writing
 activity, note health, installed plugins, recent notes, and top-level folders.
 
-The interface is written in Chinese and uses a Nord-inspired visual language.
-All analysis runs locally inside Obsidian.
+This repository is an English-language fork maintained by `duck-lint`, with a
+Nord-inspired visual language. All analysis runs locally inside Obsidian.
 
 ![Dashboard preview with Todo, plugin shortcuts, writing activity, and an interactive 3D galaxy knowledge graph](docs/aurora-dashboard-preview.png)
 
@@ -61,14 +61,14 @@ cells use a subtle opacity difference and can be disabled in settings.
 
 ### Community plugin directory
 
-Install **Dashboard** from **Settings → Community plugins → Browse**, or
-open its [Obsidian Community listing](https://community.obsidian.md/plugins/aurora-dashboard)
-and choose **Add to Obsidian**.
+The upstream project documents Community Plugin submission, but this English
+fork is not submitted to that directory. Use manual installation or the
+workflow artifact described below.
 
 ## Commands
 
-- **Dashboard: 打开首页看板**
-- **Dashboard: 重新扫描首页统计**
+- **Dashboard: Open dashboard**
+- **Dashboard: Refresh dashboard statistics**
 
 The ribbon dashboard icon also opens the view.
 
@@ -108,7 +108,11 @@ npm run check
 ```
 
 This runs ESLint, Vitest, TypeScript type-checking, and the production esbuild
-bundle.
+bundle, plus the scoped untranslated-interface check.
+
+The GitHub Actions workflow runs the same checks on pull requests and pushes to
+`main` using Node.js 22. It uploads exactly `main.js`, `manifest.json`, and
+`styles.css` as the `dashboard-english-build` artifact.
 
 ## Release
 
@@ -123,7 +127,13 @@ bundle.
 6. Submit the repository through the
    [Obsidian Community plugin submission process](https://docs.obsidian.md/Plugins/Releasing/Submit+your+plugin).
 
-Repository: [tianxiangyu0717-hub/obsidian-aurora-dashboard](https://github.com/tianxiangyu0717-hub/obsidian-aurora-dashboard)
+This fork is not an official upstream translation. It preserves the original
+plugin ID, settings keys, saved-data schema, view type, command IDs, CSS class
+names, vault statistics, activity history, and minimum Obsidian version.
+
+Upstream project: [tianxiangyu0717-hub/obsidian-aurora-dashboard](https://github.com/tianxiangyu0717-hub/obsidian-aurora-dashboard)
+
+English fork: [duck-lint/obsidian-aurora-dashboard](https://github.com/duck-lint/obsidian-aurora-dashboard)
 
 ## Compatibility
 
@@ -140,4 +150,4 @@ that theme.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). Original project and author attribution are preserved.

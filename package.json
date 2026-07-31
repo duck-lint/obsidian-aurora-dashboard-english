@@ -9,7 +9,8 @@
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
     "lint": "eslint src",
     "test": "vitest run",
-    "check": "npm run lint && npm run test && npm run build",
+    "check": "npm run lint && npm run test && npm run check:interface && npm run build",
+    "check:interface": "node scripts/check-interface.mjs",
     "version": "node version-bump.mjs && git add manifest.json versions.json"
   },
   "keywords": [
@@ -22,11 +23,11 @@
   "author": "Sean",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tianxiangyu0717-hub/obsidian-aurora-dashboard.git"
+    "url": "git+https://github.com/duck-lint/obsidian-aurora-dashboard.git"
   },
-  "homepage": "https://github.com/tianxiangyu0717-hub/obsidian-aurora-dashboard#readme",
+  "homepage": "https://github.com/duck-lint/obsidian-aurora-dashboard#readme",
   "bugs": {
-    "url": "https://github.com/tianxiangyu0717-hub/obsidian-aurora-dashboard/issues"
+    "url": "https://github.com/duck-lint/obsidian-aurora-dashboard/issues"
   },
   "license": "MIT",
   "devDependencies": {

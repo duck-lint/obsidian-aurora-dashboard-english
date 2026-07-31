@@ -26,9 +26,9 @@ export class QuickPluginModal extends Modal {
   private render(): void {
     this.contentEl.empty();
     const header = this.contentEl.createDiv("aurora-modal-header");
-    header.createEl("h2", { text: "管理快捷插件" });
+    header.createEl("h2", { text: "Manage plugin shortcuts" });
     header.createEl("p", {
-      text: "调整顶部快捷入口的顺序，或从当前仓库已安装的插件中增删。"
+      text: "Reorder shortcuts or add and remove plugins installed in this vault."
     });
 
     const byId = new Map(this.installed.map((plugin) => [plugin.id, plugin]));
@@ -41,13 +41,13 @@ export class QuickPluginModal extends Modal {
       (plugin) => !selectedSet.has(plugin.id)
     );
 
-    this.renderSection("快捷入口", selected, true);
-    this.renderSection("可添加插件", available, false);
+    this.renderSection("Selected shortcuts", selected, true);
+    this.renderSection("Available plugins", available, false);
 
     const actions = this.contentEl.createDiv("aurora-settings-actions");
     const done = actions.createEl("button", {
       cls: "mod-cta",
-      text: "完成",
+      text: "Done",
       attr: { type: "button" }
     });
     done.addEventListener("click", () => this.close());
@@ -67,7 +67,7 @@ export class QuickPluginModal extends Modal {
     if (plugins.length === 0) {
       list.createDiv({
         cls: "aurora-plugin-manager-empty",
-        text: selected ? "还没有快捷入口" : "没有更多可添加的插件"
+        text: selected ? "No shortcuts selected" : "No more plugins available"
       });
       return;
     }
@@ -88,21 +88,21 @@ export class QuickPluginModal extends Modal {
       const controls = row.createSpan("aurora-plugin-manager-controls");
 
       if (selected) {
-        this.createRowButton(controls, "arrow-up", "上移", index === 0, () =>
+        this.createRowButton(controls, "arrow-up", "Move up", index === 0, () =>
           this.move(plugin.id, -1)
         );
         this.createRowButton(
           controls,
           "arrow-down",
-          "下移",
+          "Move down",
           index === plugins.length - 1,
           () => this.move(plugin.id, 1)
         );
-        this.createRowButton(controls, "x", "移除", false, () =>
+        this.createRowButton(controls, "x", "Remove", false, () =>
           this.remove(plugin.id)
         );
       } else {
-        this.createRowButton(controls, "plus", "添加", false, () =>
+        this.createRowButton(controls, "plus", "Add", false, () =>
           this.add(plugin.id)
         );
       }

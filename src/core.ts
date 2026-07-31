@@ -61,18 +61,18 @@ export function updateMarkdownTask(
   const index =
     lines[task.line] === task.raw ? task.line : lines.indexOf(task.raw);
   if (index < 0) {
-    throw new Error("任务所在行已经发生变化，请刷新后重试");
+    throw new Error("The task line changed. Refresh and try again.");
   }
 
   const current = lines[index];
   const match = current?.match(/^(\s*[-*+]\s+\[)([ xX])(\]\s+)(.*)$/u);
   if (!match) {
-    throw new Error("目标内容已经不再是 Markdown 任务");
+    throw new Error("The target is no longer a Markdown task.");
   }
 
   const nextText = update.text === undefined ? match[4] : update.text.trim();
   if (!nextText) {
-    throw new Error("任务内容不能为空");
+    throw new Error("Task text cannot be empty.");
   }
   const state = update.completed === undefined ? match[2] : update.completed ? "x" : " ";
   lines[index] = `${match[1]}${state}${match[3]}${nextText}`;
@@ -114,13 +114,14 @@ export function activityLevel(value: number, max: number): number {
 }
 
 export function formatCompactNumber(value: number): string {
-  if (value >= 100_000_000) {
-    return `${trimDecimal(value / 100_000_000)} 亿`;
+  if (value >= 1_000_000_000) {
+    return `${trimDecimal(value / 1_000_000_000)}B`;
   }
-  if (value >= 10_000) {
-    return `${trimDecimal(value / 10_000)} 万`;
+  if (value >= 1_000_000) {
+    return `${trimDecimal(value / 1_000_000)}M`;
   }
-  return new Intl.NumberFormat("zh-CN").format(value);
+  if (value >= 1_000) return `${trimDecimal(value / 1_000)}K`;
+  return new Intl.NumberFormat("en-CA").format(value);
 }
 
 function trimDecimal(value: number): string {

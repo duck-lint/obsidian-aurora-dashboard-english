@@ -31,23 +31,23 @@ export default class AuroraDashboardPlugin extends Plugin {
       (leaf) => new AuroraDashboardView(leaf, this)
     );
 
-    this.addRibbonIcon("layout-dashboard", "打开 Dashboard", () => {
+    this.addRibbonIcon("layout-dashboard", "Open Dashboard", () => {
       void this.openDashboard("new-tab");
     });
 
     this.addCommand({
       id: "open-dashboard",
-      name: "打开首页看板",
+      name: "Open dashboard",
       callback: () => void this.openDashboard("new-tab")
     });
 
     this.addCommand({
       id: "refresh-dashboard",
-      name: "重新扫描首页统计",
+      name: "Refresh dashboard statistics",
       callback: () => {
         this.stats.invalidate();
         this.refreshDashboardViews(true);
-        new Notice("Dashboard 正在重新扫描");
+        new Notice("Dashboard is refreshing");
       }
     });
 
@@ -141,7 +141,7 @@ export default class AuroraDashboardPlugin extends Plugin {
 
     return plugins
       .filter((plugin): plugin is InstalledPlugin => plugin !== null)
-      .sort((left, right) => left.name.localeCompare(right.name, "zh-CN"));
+      .sort((left, right) => left.name.localeCompare(right.name, "en-CA"));
   }
 
   async initializeQuickPlugins(plugins: InstalledPlugin[]): Promise<void> {

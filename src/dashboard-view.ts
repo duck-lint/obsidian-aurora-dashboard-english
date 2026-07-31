@@ -103,8 +103,8 @@ export class AuroraDashboardView extends ItemView {
     );
     const mark = root.createDiv("aurora-loading-mark");
     setIcon(mark, "loader-circle");
-    root.createEl("h2", { text: "正在扫描知识库" });
-    root.createEl("p", { text: "首次统计可能需要几秒钟。" });
+    root.createEl("h2", { text: "Scanning your vault" });
+    root.createEl("p", { text: "The first scan may take a few seconds." });
   }
 
   private renderError(error: unknown): void {
@@ -115,13 +115,13 @@ export class AuroraDashboardView extends ItemView {
     );
     const mark = root.createDiv("aurora-error-mark");
     setIcon(mark, "circle-alert");
-    root.createEl("h2", { text: "暂时无法生成首页" });
+    root.createEl("h2", { text: "Unable to generate the dashboard" });
     root.createEl("p", {
-      text: error instanceof Error ? error.message : "发生未知错误"
+      text: error instanceof Error ? error.message : "An unknown error occurred"
     });
     const retry = root.createEl("button", {
       cls: "mod-cta",
-      text: "重新扫描",
+      text: "Retry scan",
       attr: { type: "button" }
     });
     retry.addEventListener("click", () => void this.refresh(true));
@@ -148,23 +148,23 @@ export class AuroraDashboardView extends ItemView {
       focusGrid,
       "Todo",
       this.plugin.data.settings.todoFilePath
-        ? `${todoCount} 项未完成`
-        : "尚未配置文件"
+        ? `${todoCount} open tasks`
+        : "No file configured"
     );
     todoSurface.addClass("aurora-todo-surface");
     this.renderTodoList(todoSurface, snapshot);
 
     const graphSurface = this.createSurface(
       focusGrid,
-      "知识图谱",
-      `${snapshot.graph.nodes.length} 个节点 · ${snapshot.graph.edges.length} 条连接`
+      "Knowledge graph",
+      `${snapshot.graph.nodes.length} nodes · ${snapshot.graph.edges.length} connections`
     );
     graphSurface.addClass("aurora-graph-surface");
     this.renderGalaxyGraph(graphSurface, snapshot.graph);
 
     const activitySurface = this.createSurface(
       root,
-      "写作活动",
+      "Writing activity",
       this.activitySubtitle()
     );
     activitySurface.addClass("aurora-activity-surface");
@@ -172,8 +172,8 @@ export class AuroraDashboardView extends ItemView {
 
     const issuesSurface = this.createSurface(
       root,
-      "待整理",
-      "点击查看具体笔记"
+      "Needs attention",
+      "Click to view notes"
     );
     issuesSurface.addClass("aurora-issues-surface");
     this.renderIssues(issuesSurface, snapshot);
@@ -181,37 +181,37 @@ export class AuroraDashboardView extends ItemView {
     const lowerGrid = root.createDiv("aurora-dashboard-grid aurora-lower-grid");
     const trendSurface = this.createSurface(
       lowerGrid,
-      "每日新增字数",
-      "过去 30 天"
+      "Words added per day",
+      "Last 30 days"
     );
     trendSurface.addClass("aurora-trend-surface");
     this.renderTrendChart(trendSurface, snapshot.trend);
 
     const recentSurface = this.createSurface(
       lowerGrid,
-      "最近笔记",
-      `${snapshot.modifiedToday} 篇今日修改`
+      "Recent notes",
+      `${snapshot.modifiedToday} modified today`
     );
     recentSurface.addClass("aurora-recent-surface");
     this.renderRecentNotes(recentSurface, snapshot);
 
     const structureSurface = this.createSurface(
       root,
-      "文件结构",
-      "按一级目录统计 Markdown 笔记"
+      "Vault structure",
+      "Markdown notes by top-level folder"
     );
     structureSurface.addClass("aurora-structure-surface");
     this.renderStructure(structureSurface, snapshot);
 
     const footer = root.createDiv("aurora-dashboard-footer");
     const scope = footer.createSpan({
-      text: `统计范围：${snapshot.noteCount} 篇 Markdown 笔记`
+      text: `Scope: ${snapshot.noteCount} Markdown notes`
     });
-    scope.setAttr("aria-label", "统计范围");
+    scope.setAttr("aria-label", "Statistics scope");
     footer.createSpan({
       text: this.plugin.data.settings.showEstimatedHistory
-        ? "写作活动包含安装前估算数据"
-        : "仅显示安装后的精确活动"
+        ? "Writing activity includes estimated pre-installation data"
+        : "Only precise activity since installation is shown"
     });
   }
 
@@ -221,7 +221,7 @@ export class AuroraDashboardView extends ItemView {
   ): void {
     const section = root.createDiv("aurora-quick-plugins");
     const label = section.createSpan("aurora-quick-plugins-label");
-    label.createSpan({ text: "快捷插件" });
+    label.createSpan({ text: "Plugin shortcuts" });
     const scroller = section.createDiv("aurora-quick-plugins-scroll");
     this.listen(scroller, "wheel", (event) => {
       if (
@@ -242,7 +242,7 @@ export class AuroraDashboardView extends ItemView {
     if (selected.length === 0) {
       scroller.createSpan({
         cls: "aurora-quick-plugins-empty",
-        text: "添加常用插件入口"
+        text: "Add a plugin shortcut"
       });
     } else {
       selected.forEach((plugin) => {
@@ -250,7 +250,7 @@ export class AuroraDashboardView extends ItemView {
           cls: "aurora-plugin-shortcut",
           href: `obsidian://show-plugin?id=${encodeURIComponent(plugin.id)}`,
           attr: {
-            "aria-label": `打开 ${plugin.name}`,
+            "aria-label": `Open ${plugin.name}`,
             title: plugin.description || plugin.name
           }
         });
@@ -265,7 +265,7 @@ export class AuroraDashboardView extends ItemView {
       });
     }
 
-    const manage = this.createIconButton(section, "sliders-horizontal", "管理快捷插件");
+    const manage = this.createIconButton(section, "sliders-horizontal", "Manage plugin shortcuts");
     manage.addClass("aurora-quick-plugins-manage");
     this.listen(manage, "click", () => {
       new QuickPluginModal(this.app, this.plugin).open();
@@ -283,16 +283,16 @@ export class AuroraDashboardView extends ItemView {
       text: `${greeting()}${displayName ? `，${displayName}` : ""}`
     });
     copy.createEl("p", {
-      text: `${this.app.vault.getName()} · ${snapshot.noteCount} 篇笔记 · ${formatUpdatedTime(snapshot.generatedAt)}`
+      text: `${this.app.vault.getName()} · ${snapshot.noteCount} notes · ${formatUpdatedTime(snapshot.generatedAt)}`
     });
 
     const actions = header.createDiv("aurora-dashboard-actions");
-    const refresh = this.createIconButton(actions, "refresh-cw", "重新扫描");
+    const refresh = this.createIconButton(actions, "refresh-cw", "Refresh scan");
     this.listen(refresh, "click", () => {
       refresh.addClass("is-spinning");
       void this.refresh(true).finally(() => refresh.removeClass("is-spinning"));
     });
-    const settings = this.createIconButton(actions, "settings", "打开设置");
+    const settings = this.createIconButton(actions, "settings", "Open settings");
     this.listen(settings, "click", () => {
       new AuroraSettingsModal(this.app, this.plugin).open();
     });
@@ -304,44 +304,44 @@ export class AuroraDashboardView extends ItemView {
       metrics,
       "files",
       formatCompactNumber(snapshot.noteCount),
-      "笔记",
+      "Notes",
       "accent-blue",
       () =>
         this.openDetails(
-          "全部笔记",
-          "按最近修改时间排序",
+          "All notes",
+          "Sorted by most recently modified",
           [...snapshot.notes]
             .sort((a, b) => b.file.stat.mtime - a.file.stat.mtime)
-            .map((note) => noteDetail(note, `${note.words} 字`))
+            .map((note) => noteDetail(note, `${note.words} words`))
         )
     );
     this.createMetricCard(
       metrics,
       "type",
       formatCompactNumber(snapshot.totalWords),
-      "总字数",
+      "Total words",
       "accent-green",
       () =>
         this.openDetails(
-          "字数明细",
-          "中文字符与其他语言词组按可读文本统计",
+          "Word count details",
+          "Readable CJK characters and non-CJK word groups",
           [...snapshot.notes]
             .sort((a, b) => b.words - a.words)
-            .map((note) => noteDetail(note, `${note.words} 字`))
+            .map((note) => noteDetail(note, `${note.words} words`))
         )
     );
     this.createMetricCard(
       metrics,
       "link",
       formatCompactNumber(snapshot.unlinkedNotes.length),
-      "待连接",
+      "Unlinked notes",
       "accent-yellow",
       () =>
         this.openDetails(
-          "无反向链接笔记",
-          "这些笔记尚未被其他笔记引用",
+          "Notes without backlinks",
+          "These notes are not referenced by other notes",
           snapshot.unlinkedNotes.map((note) =>
-            noteDetail(note, `${note.outgoingLinks} 个出链`)
+            noteDetail(note, `${note.outgoingLinks} outgoing links`)
           )
         )
     );
@@ -349,14 +349,14 @@ export class AuroraDashboardView extends ItemView {
       metrics,
       "file-warning",
       formatCompactNumber(snapshot.shortNotes.length),
-      "空白或极短",
+      "Empty or very short",
       "accent-purple",
       () =>
         this.openDetails(
-          "空白或极短笔记",
-          `当前阈值：不超过 ${this.plugin.data.settings.shortNoteWordThreshold} 字`,
+          "Empty or very short notes",
+          `Current threshold: ${this.plugin.data.settings.shortNoteWordThreshold} words or fewer`,
           snapshot.shortNotes.map((note) =>
-            noteDetail(note, `${note.words} 字`)
+            noteDetail(note, `${note.words} words`)
           )
         )
     );
@@ -378,8 +378,8 @@ export class AuroraDashboardView extends ItemView {
       this.renderTodoEmpty(
         list,
         "file-cog",
-        "尚未配置 Todo 文件",
-        "在设置中填写一个仓库内 Markdown 文件路径。"
+        "Todo file is not configured",
+        "Enter a vault-relative Markdown file path in settings."
       );
       return;
     }
@@ -390,9 +390,9 @@ export class AuroraDashboardView extends ItemView {
         list,
         configuredFile instanceof TFile ? "circle-check-big" : "file-warning",
         configuredFile instanceof TFile
-          ? "这个文件中没有未完成任务"
-          : "未找到配置的 Todo 文件",
-        configuredFile instanceof TFile ? configuredPath : `请检查路径：${configuredPath}`
+          ? "This file has no open tasks"
+          : "Configured Todo file not found",
+        configuredFile instanceof TFile ? configuredPath : `Check the path: ${configuredPath}`
       );
       return;
     }
@@ -403,8 +403,8 @@ export class AuroraDashboardView extends ItemView {
         cls: "aurora-todo-check",
         attr: {
           type: "button",
-          "aria-label": `完成任务：${task.text}`,
-          title: "标记为已完成"
+          "aria-label": `Complete task: ${task.text}`,
+          title: "Mark as complete"
         }
       });
       setIcon(complete, "circle");
@@ -418,12 +418,12 @@ export class AuroraDashboardView extends ItemView {
         value: task.text,
         attr: {
           type: "text",
-          "aria-label": `编辑任务：${task.text}`
+          "aria-label": `Edit task: ${task.text}`
         }
       });
       copy.createSpan({
         cls: "aurora-todo-path",
-        text: `${file.basename} · 第 ${task.line + 1} 行`
+        text: `${file.basename} · Line ${task.line + 1}`
       });
       const commit = (): void => {
         const value = input.value.trim();
@@ -442,7 +442,7 @@ export class AuroraDashboardView extends ItemView {
         }
       });
 
-      const open = this.createIconButton(row, "external-link", "打开任务笔记");
+      const open = this.createIconButton(row, "external-link", "Open task note");
       open.addClass("aurora-todo-open");
       this.listen(open, "click", () => {
         void this.app.workspace.getLeaf(false).openFile(file);
@@ -452,18 +452,18 @@ export class AuroraDashboardView extends ItemView {
     if (todos.length > 7) {
       const more = list.createEl("button", {
         cls: "aurora-todo-more",
-        text: `查看其余 ${todos.length - 7} 项`,
+        text: `View ${todos.length - 7} more`,
         attr: { type: "button" }
       });
       this.listen(more, "click", () => {
         this.openDetails(
-          "未完成任务",
-          "点击任务可打开对应笔记",
+          "Open tasks",
+          "Click a task to open its note",
           todos.map(({ file, task }) => ({
             file,
             title: task.text,
             subtitle: file.path,
-            badge: `第 ${task.line + 1} 行`
+            badge: `Line ${task.line + 1}`
           }))
         );
       });
@@ -482,7 +482,7 @@ export class AuroraDashboardView extends ItemView {
     empty.createSpan({ cls: "aurora-todo-empty-title", text: title });
     empty.createSpan({ cls: "aurora-todo-empty-description", text: description });
     const configure = empty.createEl("button", {
-      text: "配置 Todo 文件",
+      text: "Configure Todo file",
       attr: { type: "button" }
     });
     this.listen(configure, "click", () => {
@@ -505,7 +505,7 @@ export class AuroraDashboardView extends ItemView {
       await this.refresh(true);
     } catch (error) {
       new Notice(
-        error instanceof Error ? error.message : "任务更新失败，请刷新后重试"
+        error instanceof Error ? error.message : "Task update failed. Refresh and try again."
       );
       control.removeClass("is-saving");
       if (
@@ -523,7 +523,7 @@ export class AuroraDashboardView extends ItemView {
   ): void {
     const body = surface.createDiv("aurora-galaxy-graph");
     if (snapshot.nodes.length === 0) {
-      body.createDiv({ cls: "aurora-empty-state", text: "还没有可展示的连接" });
+      body.createDiv({ cls: "aurora-empty-state", text: "No connections to display" });
       return;
     }
 
@@ -572,7 +572,7 @@ export class AuroraDashboardView extends ItemView {
         .showNavInfo(false)
         .nodeId("id")
         .nodeLabel((node) =>
-          `${escapeHtml(node.file.basename)}<br><span>${node.degree} 个连接</span>`
+          `${escapeHtml(node.file.basename)}<br><span>${node.degree} connections</span>`
         )
         .nodeColor((node) => node.color)
         .nodeVal((node) => node.val)
@@ -630,8 +630,8 @@ export class AuroraDashboardView extends ItemView {
         cls: "aurora-empty-state",
         text:
           error instanceof Error
-            ? `3D 图谱加载失败：${error.message}`
-            : "3D 图谱加载失败"
+            ? `The 3D graph failed to load: ${error.message}`
+            : "The 3D graph failed to load"
       });
     }
   }
@@ -651,11 +651,11 @@ export class AuroraDashboardView extends ItemView {
     const body = surface.createDiv("aurora-heatmap-body");
     const weekdayLabels = body.createDiv("aurora-heatmap-weekdays");
     weekdayLabels.createSpan({ text: "" });
-    weekdayLabels.createSpan({ text: "一" });
+    weekdayLabels.createSpan({ text: "Mon" });
     weekdayLabels.createSpan({ text: "" });
-    weekdayLabels.createSpan({ text: "三" });
+    weekdayLabels.createSpan({ text: "Wed" });
     weekdayLabels.createSpan({ text: "" });
-    weekdayLabels.createSpan({ text: "五" });
+    weekdayLabels.createSpan({ text: "Fri" });
     weekdayLabels.createSpan({ text: "" });
 
     const content = body.createDiv("aurora-heatmap-content");
@@ -690,12 +690,12 @@ export class AuroraDashboardView extends ItemView {
     });
 
     const legend = surface.createDiv("aurora-heatmap-legend");
-    legend.createSpan({ text: "少" });
+    legend.createSpan({ text: "Less" });
     for (let level = 1; level <= 5; level += 1) {
       const swatch = legend.createSpan("aurora-heatmap-swatch");
       swatch.dataset.level = String(level);
     }
-    legend.createSpan({ text: "多" });
+    legend.createSpan({ text: "More" });
   }
 
   private renderIssues(
@@ -706,7 +706,7 @@ export class AuroraDashboardView extends ItemView {
     this.createIssueRow(
       list,
       "square-check-big",
-      "Todo 文件未完成任务",
+      "Open tasks from Todo file",
       snapshot.taskNotes.reduce((sum, note) => sum + note.tasks.length, 0),
       () => {
         if (!this.plugin.data.settings.todoFilePath) {
@@ -718,12 +718,12 @@ export class AuroraDashboardView extends ItemView {
             file: note.file,
             title: task.text,
             subtitle: note.file.path,
-            badge: `第 ${task.line + 1} 行`
+            badge: `Line ${task.line + 1}`
           }))
         );
         this.openDetails(
-          "未完成任务",
-          `来源：${this.plugin.data.settings.todoFilePath}`,
+          "Open tasks",
+          `Source: ${this.plugin.data.settings.todoFilePath}`,
           items
         );
       }
@@ -731,28 +731,28 @@ export class AuroraDashboardView extends ItemView {
     this.createIssueRow(
       list,
       "unlink",
-      "无反向链接笔记",
+      "Notes without backlinks",
       snapshot.unlinkedNotes.length,
       () =>
         this.openDetails(
-          "无反向链接笔记",
-          "这些笔记尚未被其他笔记引用",
+          "Notes without backlinks",
+          "These notes are not referenced by other notes",
           snapshot.unlinkedNotes.map((note) =>
-            noteDetail(note, `${note.outgoingLinks} 个出链`)
+            noteDetail(note, `${note.outgoingLinks} outgoing links`)
           )
         )
     );
     this.createIssueRow(
       list,
       "file-warning",
-      "空白或极短笔记",
+      "Empty or very short notes",
       snapshot.shortNotes.length,
       () =>
         this.openDetails(
-          "空白或极短笔记",
-          `当前阈值：不超过 ${this.plugin.data.settings.shortNoteWordThreshold} 字`,
+          "Empty or very short notes",
+          `Current threshold: ${this.plugin.data.settings.shortNoteWordThreshold} words or fewer`,
           snapshot.shortNotes.map((note) =>
-            noteDetail(note, `${note.words} 字`)
+            noteDetail(note, `${note.words} words`)
           )
         )
     );
@@ -765,7 +765,7 @@ export class AuroraDashboardView extends ItemView {
     const chartWrap = surface.createDiv("aurora-chart-wrap");
     const canvas = chartWrap.createEl("canvas", {
       cls: "aurora-trend-chart",
-      attr: { role: "img", "aria-label": "过去 30 天每日新增字数折线图" }
+      attr: { role: "img", "aria-label": "Words added per day over the last 30 days" }
     });
     const tooltip = chartWrap.createDiv("aurora-chart-tooltip");
     tooltip.hide();
@@ -792,7 +792,7 @@ export class AuroraDashboardView extends ItemView {
         text: formatDateLabel(day.date)
       });
       tooltip.createSpan({
-        text: `${new Intl.NumberFormat("zh-CN").format(day.addedWords)} 字`
+        text: `${new Intl.NumberFormat("en-CA").format(day.addedWords)} words`
       });
       tooltip.setCssProps({
         "--aurora-tooltip-left": `${Math.min(rect.width - 120, Math.max(8, point.x - 42))}px`,
@@ -815,13 +815,13 @@ export class AuroraDashboardView extends ItemView {
     const latest = trend.at(-1);
     chartFooter.createSpan({
       text: latest
-        ? `今日 ${new Intl.NumberFormat("zh-CN").format(latest.addedWords)} 字`
-        : "暂无活动"
+        ? `${new Intl.NumberFormat("en-CA").format(latest.addedWords)} words today`
+        : "No activity yet"
     });
     if (trend.some((day) => day.estimated)) {
       chartFooter.createSpan({
         cls: "aurora-estimate-label",
-        text: "含估算历史"
+        text: "Includes estimated history"
       });
     }
   }
@@ -832,7 +832,7 @@ export class AuroraDashboardView extends ItemView {
   ): void {
     const list = surface.createDiv("aurora-recent-list");
     if (snapshot.recentNotes.length === 0) {
-      list.createDiv({ cls: "aurora-empty-state", text: "还没有笔记" });
+      list.createDiv({ cls: "aurora-empty-state", text: "No notes yet" });
       return;
     }
     snapshot.recentNotes.slice(0, 5).forEach((note) => {
@@ -884,7 +884,7 @@ export class AuroraDashboardView extends ItemView {
       });
       heading.createSpan({
         cls: "aurora-structure-count",
-        text: `${folder.noteCount} 篇`
+        text: `${folder.noteCount} notes`
       });
       const bar = copy.createSpan("aurora-structure-bar");
       const fill = bar.createSpan("aurora-structure-bar-fill");
@@ -894,7 +894,7 @@ export class AuroraDashboardView extends ItemView {
       });
       row.createSpan({
         cls: "aurora-structure-words",
-        text: `${formatCompactNumber(folder.wordCount)} 字`
+        text: `${formatCompactNumber(folder.wordCount)} words`
       });
       const arrow = row.createSpan("aurora-row-arrow");
       setIcon(arrow, "chevron-right");
@@ -904,13 +904,13 @@ export class AuroraDashboardView extends ItemView {
         );
         this.openDetails(
           folder.name,
-          `${folder.noteCount} 篇笔记 · ${formatCompactNumber(folder.wordCount)} 字`,
+          `${folder.noteCount} notes · ${formatCompactNumber(folder.wordCount)} words`,
           folder.files.map((file) => {
             const metric = metricsByPath.get(file.path);
             return {
               file,
               subtitle: file.path,
-              badge: metric ? `${metric.words} 字` : undefined
+              badge: metric ? `${metric.words} words` : undefined
             };
           })
         );
@@ -999,16 +999,16 @@ export class AuroraDashboardView extends ItemView {
   private openActivityDay(day: DailyActivity): void {
     this.openDetails(
       formatDateLabel(day.date),
-      `${new Intl.NumberFormat("zh-CN").format(day.addedWords)} 字 · ${day.edits} 次编辑${day.estimated ? " · 估算" : ""}`,
+      `${new Intl.NumberFormat("en-CA").format(day.addedWords)} words · ${day.edits} edits${day.estimated ? " · estimated" : ""}`,
       day.files.map((file) => ({ file, subtitle: file.path }))
     );
   }
 
   private activitySubtitle(): string {
     const days = this.plugin.data.settings.activityHistoryDays;
-    if (days >= 365) return "过去 12 个月";
-    if (days >= 180) return "过去 6 个月";
-    return `过去 ${days} 天`;
+    if (days >= 365) return "Last 12 months";
+    if (days >= 180) return "Last 6 months";
+    return `Last ${days} days`;
   }
 
   private listen<K extends keyof HTMLElementEventMap>(
@@ -1235,18 +1235,18 @@ function noteDetail(note: NoteMetric, badge?: string): DetailItem {
 
 function greeting(now = new Date()): string {
   const hour = now.getHours();
-  if (hour < 6) return "夜深了";
-  if (hour < 11) return "早上好";
-  if (hour < 14) return "中午好";
-  if (hour < 18) return "下午好";
-  return "晚上好";
+  if (hour < 6) return "Up late?";
+  if (hour < 11) return "Good morning";
+  if (hour < 14) return "Good afternoon";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
 }
 
 function formatUpdatedTime(timestamp: number): string {
   const diff = Date.now() - timestamp;
-  if (diff < 60_000) return "刚刚更新";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前更新`;
-  return new Intl.DateTimeFormat("zh-CN", {
+  if (diff < 60_000) return "Updated just now";
+  if (diff < 3_600_000) return `Updated ${Math.floor(diff / 60_000)} minutes ago`;
+  return new Intl.DateTimeFormat("en-CA", {
     hour: "2-digit",
     minute: "2-digit"
   }).format(timestamp);
@@ -1254,18 +1254,18 @@ function formatUpdatedTime(timestamp: number): string {
 
 function relativeTime(timestamp: number): string {
   const diff = Math.max(0, Date.now() - timestamp);
-  if (diff < 60_000) return "刚刚";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} 小时前`;
-  if (diff < 604_800_000) return `${Math.floor(diff / 86_400_000)} 天前`;
-  return new Intl.DateTimeFormat("zh-CN", {
+  if (diff < 60_000) return "Just now";
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} minutes ago`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} hours ago`;
+  if (diff < 604_800_000) return `${Math.floor(diff / 86_400_000)} days ago`;
+  return new Intl.DateTimeFormat("en-CA", {
     month: "numeric",
     day: "numeric"
   }).format(timestamp);
 }
 
 function formatDateLabel(date: string): string {
-  return new Intl.DateTimeFormat("zh-CN", {
+  return new Intl.DateTimeFormat("en-CA", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -1279,8 +1279,8 @@ function formatShortDate(date: string): string {
 }
 
 function activityAriaLabel(day: DailyActivity): string {
-  const source = day.estimated ? "，估算数据" : "";
-  return `${formatDateLabel(day.date)}，${day.addedWords} 字，${day.edits} 次编辑${source}`;
+  const source = day.estimated ? ", estimated" : "";
+  return `${formatDateLabel(day.date)}, ${day.addedWords} words, ${day.edits} edits${source}`;
 }
 
 function monthNamesForRange(activity: DailyActivity[]): string[] {
@@ -1289,7 +1289,11 @@ function monthNamesForRange(activity: DailyActivity[]): string[] {
   activity.forEach((day) => {
     const month = new Date(`${day.date}T00:00:00`).getMonth();
     if (month !== previous) {
-      months.push(`${month + 1}月`);
+      months.push(
+        new Intl.DateTimeFormat("en-CA", { month: "short" }).format(
+          new Date(2026, month, 1)
+        )
+      );
       previous = month;
     }
   });

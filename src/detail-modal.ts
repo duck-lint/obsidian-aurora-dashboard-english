@@ -42,8 +42,8 @@ export class DetailModal extends Modal {
     const search = searchWrap.createEl("input", {
       attr: {
         type: "search",
-        placeholder: `搜索 ${this.items.length} 条结果`,
-        "aria-label": "搜索结果"
+        placeholder: `Search ${this.items.length} results`,
+        "aria-label": "Search results"
       }
     });
     search.addEventListener("input", () => {
@@ -59,7 +59,7 @@ export class DetailModal extends Modal {
     });
 
     const summary = this.contentEl.createDiv("aurora-modal-summary");
-    summary.setText(`共 ${this.items.length} 条`);
+    summary.setText(`${this.items.length} results`);
     const list = this.contentEl.createDiv("aurora-modal-list");
     this.renderList(list);
     window.setTimeout(() => search.focus(), 0);
@@ -71,7 +71,7 @@ export class DetailModal extends Modal {
       const empty = list.createDiv("aurora-modal-empty");
       const icon = empty.createSpan();
       setIcon(icon, "search-x");
-      empty.createEl("p", { text: "没有匹配结果" });
+      empty.createEl("p", { text: "No matching results" });
       return;
     }
 
