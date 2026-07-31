@@ -58,7 +58,7 @@ describe("extractOpenTasks", () => {
     expect(task).toBeDefined();
     expect(() =>
       updateMarkdownTask("- [ ] Replaced", task!, { text: "Edited" })
-    ).toThrow("任务所在行已经发生变化");
+    ).toThrow("The task line changed");
   });
 });
 
@@ -92,8 +92,10 @@ describe("date and presentation helpers", () => {
     expect(activityLevel(100, 100)).toBe(5);
   });
 
-  it("formats Chinese compact numbers", () => {
-    expect(formatCompactNumber(369_155)).toBe("36.9 万");
+  it("formats English compact numbers", () => {
+    expect(formatCompactNumber(369_155)).toBe("369K");
+    expect(formatCompactNumber(1_250_000)).toBe("1.25M");
+    expect(formatCompactNumber(1_250_000_000)).toBe("1.25B");
     expect(formatCompactNumber(368)).toBe("368");
   });
 });

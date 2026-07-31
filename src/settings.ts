@@ -34,18 +34,18 @@ export class AuroraSettingTab extends PluginSettingTab {
   getSettingDefinitions(): SettingDefinitionItem<AuroraSettingKey>[] {
     return [
       {
-        name: "问候名称",
-        desc: "可选。留空时首页只显示时段问候。",
+        name: "Greeting name",
+        desc: "Optional. Leave blank to show only the time-based greeting.",
         control: {
           type: "text",
           key: "displayName",
           defaultValue: "",
-          placeholder: "例如 Sean"
+          placeholder: "For example, Sean"
         }
       },
       {
-        name: "启动时打开首页",
-        desc: "Obsidian 工作区加载完成后自动显示 Dashboard。",
+        name: "Open dashboard on startup",
+        desc: "Show Dashboard automatically when the Obsidian workspace is ready.",
         control: {
           type: "toggle",
           key: "openOnStartup",
@@ -53,31 +53,31 @@ export class AuroraSettingTab extends PluginSettingTab {
         }
       },
       {
-        name: "启动方式",
-        desc: "替换当前标签更像默认首页；新标签会保留上次打开的笔记。",
+        name: "Startup mode",
+        desc: "Replacing the active tab feels more like a home page; a new tab keeps your last note open.",
         control: {
           type: "dropdown",
           key: "startupMode",
           defaultValue: "replace-active",
           options: {
-            "replace-active": "替换当前标签",
-            "new-tab": "在新标签打开"
+            "replace-active": "Replace active tab",
+            "new-tab": "Open in new tab"
           }
         }
       },
       {
-        name: "Todo 文件路径",
-        desc: "留空时 Todo 模块为空；填写一个仓库内 Markdown 文件的相对路径后，只读取该文件中的未完成任务。",
+        name: "Todo file path",
+        desc: "Leave blank to hide Todo items. Enter a vault-relative Markdown path to read open tasks from that file.",
         control: {
           type: "text",
           key: "todoFilePath",
           defaultValue: "",
-          placeholder: "例如 Todo.md 或 工作/Todo.md"
+          placeholder: "For example, Todo.md or Work/Todo.md"
         }
       },
       {
-        name: "空白或极短阈值",
-        desc: "字数小于或等于该值时，归入“空白或极短”。",
+        name: "Empty or very short threshold",
+        desc: "Notes with this many words or fewer are counted as empty or very short.",
         control: {
           type: "slider",
           key: "shortNoteWordThreshold",
@@ -88,19 +88,19 @@ export class AuroraSettingTab extends PluginSettingTab {
         }
       },
       {
-        name: "排除文件夹",
-        desc: "每行一个仓库相对路径；其子目录也会被排除。",
+        name: "Excluded folders",
+        desc: "One vault-relative path per line; subfolders are excluded too.",
         control: {
           type: "textarea",
           key: "excludedFolders",
           defaultValue: "",
-          placeholder: "模板\n归档/附件",
+          placeholder: "Templates\nArchive/Attachments",
           rows: 4
         }
       },
       {
-        name: "显示估算历史",
-        desc: "安装前无法精确还原每日输入量；开启后会按文件当前字数和最后修改日期估算。",
+        name: "Show estimated history",
+        desc: "Daily activity before installation cannot be recovered exactly; when enabled, it is estimated from current word counts and modification dates.",
         control: {
           type: "toggle",
           key: "showEstimatedHistory",
@@ -108,16 +108,16 @@ export class AuroraSettingTab extends PluginSettingTab {
         }
       },
       {
-        name: "活动日历范围",
-        desc: "控制首页热力日历的统计天数。",
+        name: "Activity calendar range",
+        desc: "Choose how many days appear in the dashboard heatmap.",
         control: {
           type: "dropdown",
           key: "activityHistoryDays",
           defaultValue: "365",
           options: {
-            "90": "最近 90 天",
-            "180": "最近 180 天",
-            "365": "最近 365 天"
+            "90": "Last 90 days",
+            "180": "Last 180 days",
+            "365": "Last 365 days"
           }
         }
       }
@@ -221,18 +221,18 @@ function renderSettings(
   close?: () => void
 ): void {
   container.empty();
-  container.createEl("h2", { text: "Dashboard 设置" });
+  container.createEl("h2", { text: "Dashboard settings" });
   container.createEl("p", {
     cls: "setting-item-description aurora-settings-intro",
-    text: "所有统计与活动记录都只保存在当前仓库，不会发送到网络。"
+    text: "All statistics and activity records stay in the current vault and are never sent over the network."
   });
 
   new Setting(container)
-    .setName("问候名称")
-    .setDesc("可选。留空时首页只显示时段问候。")
+    .setName("Greeting name")
+    .setDesc("Optional. Leave blank to show only the time-based greeting.")
     .addText((text) =>
       text
-        .setPlaceholder("例如 Sean")
+        .setPlaceholder("For example, Sean")
         .setValue(plugin.data.settings.displayName)
         .onChange(async (value) => {
           plugin.data.settings.displayName = value.trim();
@@ -241,8 +241,8 @@ function renderSettings(
     );
 
   new Setting(container)
-    .setName("启动时打开首页")
-    .setDesc("Obsidian 工作区加载完成后自动显示 Dashboard。")
+    .setName("Open dashboard on startup")
+    .setDesc("Show Dashboard automatically when the Obsidian workspace is ready.")
     .addToggle((toggle) =>
       toggle
         .setValue(plugin.data.settings.openOnStartup)
@@ -253,12 +253,12 @@ function renderSettings(
     );
 
   new Setting(container)
-    .setName("启动方式")
-    .setDesc("替换当前标签更像默认首页；新标签会保留上次打开的笔记。")
+    .setName("Startup mode")
+    .setDesc("Replacing the active tab feels more like a home page; a new tab keeps your last note open.")
     .addDropdown((dropdown) =>
       dropdown
-        .addOption("replace-active", "替换当前标签")
-        .addOption("new-tab", "在新标签打开")
+        .addOption("replace-active", "Replace active tab")
+        .addOption("new-tab", "Open in new tab")
         .setValue(plugin.data.settings.startupMode)
         .onChange(async (value) => {
           plugin.data.settings.startupMode = value as StartupMode;
@@ -267,13 +267,13 @@ function renderSettings(
     );
 
   new Setting(container)
-    .setName("Todo 文件路径")
+    .setName("Todo file path")
     .setDesc(
-      "留空时 Todo 模块为空；填写仓库内 Markdown 文件的相对路径后，只读取该文件中的未完成任务。"
+      "Leave blank to hide Todo items. Enter a vault-relative Markdown path to read open tasks from that file."
     )
     .addText((text) =>
       text
-        .setPlaceholder("例如 Todo.md 或 工作/Todo.md")
+        .setPlaceholder("For example, Todo.md or Work/Todo.md")
         .setValue(plugin.data.settings.todoFilePath)
         .onChange(async (value) => {
           plugin.data.settings.todoFilePath = normalizeTodoFilePath(value);
@@ -282,8 +282,8 @@ function renderSettings(
     );
 
   new Setting(container)
-    .setName("空白或极短阈值")
-    .setDesc("字数小于或等于该值时，归入“空白或极短”。")
+    .setName("Empty or very short threshold")
+    .setDesc("Notes with this many words or fewer are counted as empty or very short.")
     .addSlider((slider) =>
       slider
         .setLimits(0, 100, 5)
@@ -295,11 +295,11 @@ function renderSettings(
     );
 
   new Setting(container)
-    .setName("排除文件夹")
-    .setDesc("每行一个仓库相对路径；其子目录也会被排除。")
+    .setName("Excluded folders")
+    .setDesc("One vault-relative path per line; subfolders are excluded too.")
     .addTextArea((text) => {
       text
-        .setPlaceholder("模板\n归档/附件")
+        .setPlaceholder("Templates\nArchive/Attachments")
         .setValue(plugin.data.settings.excludedFolders.join("\n"))
         .onChange(async (value) => {
           plugin.data.settings.excludedFolders = parseExcludedFolders(value);
@@ -309,9 +309,9 @@ function renderSettings(
     });
 
   new Setting(container)
-    .setName("显示估算历史")
+    .setName("Show estimated history")
     .setDesc(
-      "安装前无法精确还原每日输入量；开启后会按文件当前字数和最后修改日期估算。"
+      "Daily activity before installation cannot be recovered exactly; when enabled, it is estimated from current word counts and modification dates."
     )
     .addToggle((toggle) =>
       toggle
@@ -323,13 +323,13 @@ function renderSettings(
     );
 
   new Setting(container)
-    .setName("活动日历范围")
-    .setDesc("控制首页热力日历的统计天数。")
+    .setName("Activity calendar range")
+    .setDesc("Choose how many days appear in the dashboard heatmap.")
     .addDropdown((dropdown) =>
       dropdown
-        .addOption("90", "最近 90 天")
-        .addOption("180", "最近 180 天")
-        .addOption("365", "最近 365 天")
+        .addOption("90", "Last 90 days")
+        .addOption("180", "Last 180 days")
+        .addOption("365", "Last 365 days")
         .setValue(String(plugin.data.settings.activityHistoryDays))
         .onChange(async (value) => {
           plugin.data.settings.activityHistoryDays = Number(value);
@@ -341,7 +341,7 @@ function renderSettings(
     const actions = container.createDiv("aurora-settings-actions");
     const done = actions.createEl("button", {
       cls: "mod-cta",
-      text: "完成",
+      text: "Done",
       attr: { type: "button" }
     });
     done.addEventListener("click", close);

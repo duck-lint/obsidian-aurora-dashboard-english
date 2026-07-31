@@ -1,5 +1,10 @@
 # Changelog
 
+## English fork 0.2.0
+
+- Translate the complete Dashboard 0.2.0 interface and presentation formatting to English.
+- Add scoped interface validation and pull-request/default-branch CI with a downloadable installable build artifact.
+
 ## 0.2.0
 
 - Rename the displayed plugin to Dashboard and add a horizontally scrollable, manually ordered plugin shortcut strip.
