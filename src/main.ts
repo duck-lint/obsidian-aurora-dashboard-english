@@ -1,4 +1,6 @@
-import { Notice, Plugin, TFile } from "obsidian";
+import { Notice, Plugin, TFile, normalizePath } from "obsidian";
+import type { PluginManifest } from "obsidian";
+import { updateMarkdownTask } from "./core";
 import {
   AuroraDashboardView,
   VIEW_TYPE_AURORA_DASHBOARD
@@ -7,6 +9,8 @@ import {
   DEFAULT_DATA,
   DEFAULT_SETTINGS,
   type AuroraPluginData,
+  type InstalledPlugin,
+  type OpenTask,
   type StartupMode
 } from "./models";
 import { AuroraSettingTab } from "./settings";
@@ -27,7 +31,7 @@ export default class AuroraDashboardPlugin extends Plugin {
       (leaf) => new AuroraDashboardView(leaf, this)
     );
 
-    this.addRibbonIcon("layout-dashboard", "打开 Aurora Dashboard", () => {
+    this.addRibbonIcon("layout-dashboard", "打开 Dashboard", () => {
       void this.openDashboard("new-tab");
     });
 
@@ -43,7 +47,7 @@ export default class AuroraDashboardPlugin extends Plugin {
       callback: () => {
         this.stats.invalidate();
         this.refreshDashboardViews(true);
-        new Notice("Aurora Dashboard 正在重新扫描");
+        new Notice("Dashboard 正在重新扫描");
       }
     });
 
@@ -103,6 +107,59 @@ export default class AuroraDashboardPlugin extends Plugin {
     this.stats.invalidate();
     await this.saveData(this.data);
     this.refreshDashboardViews(true);
+  }
+
+  async saveDashboardPreferences(): Promise<void> {
+    await this.saveData(this.data);
+    this.refreshDashboardViews();
+  }
+
+  async getInstalledPlugins(): Promise<InstalledPlugin[]> {
+    const pluginsDir = normalizePath(`${this.app.vault.configDir}/plugins`);
+    if (!(await this.app.vault.adapter.exists(pluginsDir))) return [];
+
+    const { folders } = await this.app.vault.adapter.list(pluginsDir);
+    const plugins = await Promise.all(
+      folders.map(async (folder): Promise<InstalledPlugin | null> => {
+        try {
+          const manifestPath = normalizePath(`${folder}/manifest.json`);
+          const source = await this.app.vault.adapter.read(manifestPath);
+          const parsed: unknown = JSON.parse(source);
+          if (!isPluginManifest(parsed) || parsed.id === this.manifest.id) {
+            return null;
+          }
+          return {
+            id: parsed.id,
+            name: parsed.name,
+            description: parsed.description
+          };
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    return plugins
+      .filter((plugin): plugin is InstalledPlugin => plugin !== null)
+      .sort((left, right) => left.name.localeCompare(right.name, "zh-CN"));
+  }
+
+  async initializeQuickPlugins(plugins: InstalledPlugin[]): Promise<void> {
+    if (this.data.settings.quickPluginsInitialized) return;
+    this.data.settings.quickPluginIds = plugins.map((plugin) => plugin.id);
+    this.data.settings.quickPluginsInitialized = true;
+    await this.saveDashboardPreferences();
+  }
+
+  async updateTask(
+    file: TFile,
+    task: OpenTask,
+    update: { completed?: boolean; text?: string }
+  ): Promise<void> {
+    await this.app.vault.process(file, (markdown) =>
+      updateMarkdownTask(markdown, task, update)
+    );
+    this.stats.invalidate(file.path);
   }
 
   refreshDashboardViews(force = false): void {
@@ -175,4 +232,14 @@ export default class AuroraDashboardPlugin extends Plugin {
       })
     );
   }
+}
+
+function isPluginManifest(value: unknown): value is PluginManifest {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.name === "string" &&
+    typeof candidate.description === "string"
+  );
 }

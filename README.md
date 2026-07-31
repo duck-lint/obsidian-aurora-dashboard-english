@@ -1,27 +1,29 @@
-# Aurora Dashboard
+# Dashboard
 
-A calm, zero-config home dashboard for Obsidian. Aurora Dashboard turns the
-current vault into a clickable overview of writing activity, note health,
-unfinished work, recent notes, and top-level folders.
+A calm, interactive home dashboard for Obsidian. Dashboard turns the current
+vault into a practical overview of tasks, knowledge connections, writing
+activity, note health, installed plugins, recent notes, and top-level folders.
 
 The interface is written in Chinese and uses a Nord-inspired visual language.
 All analysis runs locally inside Obsidian.
 
-![Aurora Dashboard preview with example data](docs/aurora-dashboard-preview.png)
+![Dashboard preview with Todo, plugin shortcuts, writing activity, and an interactive 3D galaxy knowledge graph](docs/aurora-dashboard-preview.png)
 
 ## What it shows
 
 - Total Markdown notes and total readable word count.
 - Notes with no resolved backlinks.
 - Empty or very short notes, with a configurable word threshold.
-- Open Markdown task items.
+- An editable Todo list sourced only from one explicitly configured Markdown file. It is empty by default.
+- An animated 3D galaxy knowledge graph powered by Three.js/WebGL, with orbit controls, moving link particles, tooltips, and clickable notes.
+- A horizontally scrollable, manually ordered list of installed plugin shortcuts.
 - A 365-day writing activity heatmap.
 - A 30-day added-word trend.
 - Recently modified notes.
 - Note and word totals for each top-level folder.
 - Clickable details for every headline metric, issue, date, and folder.
 
-Aurora Dashboard opens automatically when the workspace is ready. You can
+Dashboard opens automatically when the workspace is ready. You can
 choose whether it replaces the active tab or opens in a new tab.
 
 ## Metric definitions
@@ -32,20 +34,20 @@ choose whether it replaces the active tab or opens in a new tab.
 | Total words | Readable CJK characters plus non-CJK word groups after common Markdown syntax, frontmatter, code fences, and comments are removed. |
 | No backlinks | Included notes that are not targeted by any resolved link in Obsidian's metadata cache. |
 | Empty or very short | Notes whose readable word count is at or below the configured threshold. The default is 10. |
-| Open tasks | Unchecked Markdown task items matching `- [ ]`. |
+| Open tasks | Unchecked Markdown task items matching `- [ ]` in the configured Todo file only. No task file is read until a path is configured. |
 | Added words | Positive word-count deltas observed after the plugin starts tracking. Deletions do not reduce a day's total. |
 
 Obsidian files do not contain an exact historical “words added per day” ledger.
-For dates before installation, Aurora Dashboard can estimate activity by
+For dates before installation, Dashboard can estimate activity by
 grouping each note's current word count under its last-modified date. Estimated
-cells use a dashed outline and can be disabled in settings.
+cells use a subtle opacity difference and can be disabled in settings.
 
 ## Privacy and safety
 
 - No analytics, network calls, accounts, or cloud service.
 - Statistics and activity history stay in
   `.obsidian/plugins/aurora-dashboard/data.json`.
-- The plugin reads note content for local counting but never edits note files.
+- The Todo module reads only the explicitly configured Markdown file and edits it only when you change or complete one of its tasks.
 - Excluded folders and their descendants are omitted from every metric.
 
 ## Install
@@ -55,26 +57,36 @@ cells use a dashed outline and can be disabled in settings.
 1. Create `.obsidian/plugins/aurora-dashboard/` inside your vault.
 2. Copy `main.js`, `manifest.json`, and `styles.css` into that folder.
 3. Reload Obsidian.
-4. Enable **Aurora Dashboard** under **Settings → Community plugins**.
+4. Enable **Dashboard** under **Settings → Community plugins**.
 
 ### Community plugin directory
 
-Install **Aurora Dashboard** from **Settings → Community plugins → Browse**, or
+Install **Dashboard** from **Settings → Community plugins → Browse**, or
 open its [Obsidian Community listing](https://community.obsidian.md/plugins/aurora-dashboard)
 and choose **Add to Obsidian**.
 
 ## Commands
 
-- **Aurora Dashboard: 打开首页看板**
-- **Aurora Dashboard: 重新扫描首页统计**
+- **Dashboard: 打开首页看板**
+- **Dashboard: 重新扫描首页统计**
 
 The ribbon dashboard icon also opens the view.
+
+The shortcut strip reads installed plugin manifests from the current vault.
+Use its manage button to reorder, remove, or add entries. Selecting a shortcut
+opens that plugin's Obsidian detail page through the official `show-plugin` URI.
+
+The 3D graph renderer uses the MIT-licensed
+[`3d-force-graph`](https://github.com/vasturiano/3d-force-graph) project and
+Three.js. Reduced-motion system preferences disable continuous star and link
+particle animation.
 
 ## Settings
 
 - Optional greeting name.
 - Open on startup.
 - Replace the active tab or open a new tab.
+- Todo Markdown file path (empty by default).
 - Empty/short-note threshold.
 - Excluded folders.
 - Show or hide estimated pre-install history.
@@ -122,8 +134,8 @@ includes narrow-view responsive styles. Hands-on QA currently covers Obsidian
 ## Design reference
 
 The color system and restrained dark surfaces are inspired by
-[insanum/obsidian_nord](https://github.com/insanum/obsidian_nord). Aurora
-Dashboard is an independent plugin and does not include code or assets from
+[insanum/obsidian_nord](https://github.com/insanum/obsidian_nord). Dashboard is
+an independent plugin and does not include code or assets from
 that theme.
 
 ## License

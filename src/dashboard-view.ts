@@ -1,17 +1,36 @@
-import { ItemView, setIcon } from "obsidian";
+import { ItemView, Notice, TFile, setIcon } from "obsidian";
 import type { WorkspaceLeaf } from "obsidian";
+import ForceGraph3D from "3d-force-graph";
+import type {
+  ForceGraph3DInstance,
+  LinkObject,
+  NodeObject
+} from "3d-force-graph";
+import {
+  AdditiveBlending,
+  BufferGeometry,
+  Color,
+  Float32BufferAttribute,
+  Points,
+  PointsMaterial
+} from "three";
 import {
   activityLevel,
   formatCompactNumber,
-  localDateKey
+  localDateKey,
+  normalizeTodoFilePath
 } from "./core";
 import { DetailModal, type DetailItem } from "./detail-modal";
 import type AuroraDashboardPlugin from "./main";
 import type {
   DailyActivity,
   DashboardSnapshot,
+  InstalledPlugin,
+  KnowledgeGraphSnapshot,
+  OpenTask,
   NoteMetric
 } from "./models";
+import { QuickPluginModal, pluginInitial } from "./quick-plugin-modal";
 import { AuroraSettingsModal } from "./settings";
 
 export const VIEW_TYPE_AURORA_DASHBOARD = "aurora-dashboard-view";
@@ -32,7 +51,7 @@ export class AuroraDashboardView extends ItemView {
   }
 
   getDisplayText(): string {
-    return "Aurora Dashboard";
+    return "Dashboard";
   }
 
   getIcon(): string {
@@ -66,8 +85,12 @@ export class AuroraDashboardView extends ItemView {
 
   async refresh(force = false): Promise<void> {
     try {
-      const snapshot = await this.plugin.stats.scan(force);
-      this.render(snapshot);
+      const [snapshot, installedPlugins] = await Promise.all([
+        this.plugin.stats.scan(force),
+        this.plugin.getInstalledPlugins()
+      ]);
+      await this.plugin.initializeQuickPlugins(installedPlugins);
+      this.render(snapshot, installedPlugins);
     } catch (error) {
       this.renderError(error);
     }
@@ -104,17 +127,43 @@ export class AuroraDashboardView extends ItemView {
     retry.addEventListener("click", () => void this.refresh(true));
   }
 
-  private render(snapshot: DashboardSnapshot): void {
+  private render(
+    snapshot: DashboardSnapshot,
+    installedPlugins: InstalledPlugin[]
+  ): void {
     this.clearRenderResources();
     this.contentEl.empty();
     const root = this.contentEl.createDiv("aurora-dashboard");
 
     this.renderHeader(root, snapshot);
+    this.renderQuickPlugins(root, installedPlugins);
     this.renderMetrics(root, snapshot);
 
-    const heroGrid = root.createDiv("aurora-dashboard-grid aurora-hero-grid");
+    const focusGrid = root.createDiv("aurora-dashboard-grid aurora-focus-grid");
+    const todoCount = snapshot.taskNotes.reduce(
+      (sum, note) => sum + note.tasks.length,
+      0
+    );
+    const todoSurface = this.createSurface(
+      focusGrid,
+      "Todo",
+      this.plugin.data.settings.todoFilePath
+        ? `${todoCount} 项未完成`
+        : "尚未配置文件"
+    );
+    todoSurface.addClass("aurora-todo-surface");
+    this.renderTodoList(todoSurface, snapshot);
+
+    const graphSurface = this.createSurface(
+      focusGrid,
+      "知识图谱",
+      `${snapshot.graph.nodes.length} 个节点 · ${snapshot.graph.edges.length} 条连接`
+    );
+    graphSurface.addClass("aurora-graph-surface");
+    this.renderGalaxyGraph(graphSurface, snapshot.graph);
+
     const activitySurface = this.createSurface(
-      heroGrid,
+      root,
       "写作活动",
       this.activitySubtitle()
     );
@@ -122,7 +171,7 @@ export class AuroraDashboardView extends ItemView {
     this.renderHeatmap(activitySurface, snapshot);
 
     const issuesSurface = this.createSurface(
-      heroGrid,
+      root,
       "待整理",
       "点击查看具体笔记"
     );
@@ -161,8 +210,65 @@ export class AuroraDashboardView extends ItemView {
     scope.setAttr("aria-label", "统计范围");
     footer.createSpan({
       text: this.plugin.data.settings.showEstimatedHistory
-        ? "虚线方格表示安装前估算数据"
+        ? "写作活动包含安装前估算数据"
         : "仅显示安装后的精确活动"
+    });
+  }
+
+  private renderQuickPlugins(
+    root: HTMLElement,
+    installedPlugins: InstalledPlugin[]
+  ): void {
+    const section = root.createDiv("aurora-quick-plugins");
+    const label = section.createSpan("aurora-quick-plugins-label");
+    label.createSpan({ text: "快捷插件" });
+    const scroller = section.createDiv("aurora-quick-plugins-scroll");
+    this.listen(scroller, "wheel", (event) => {
+      if (
+        scroller.scrollWidth > scroller.clientWidth &&
+        Math.abs(event.deltaY) > Math.abs(event.deltaX)
+      ) {
+        scroller.scrollLeft += event.deltaY;
+        event.preventDefault();
+      }
+    });
+    const byId = new Map(
+      installedPlugins.map((plugin) => [plugin.id, plugin])
+    );
+    const selected = this.plugin.data.settings.quickPluginIds
+      .map((id) => byId.get(id))
+      .filter((plugin): plugin is InstalledPlugin => plugin !== undefined);
+
+    if (selected.length === 0) {
+      scroller.createSpan({
+        cls: "aurora-quick-plugins-empty",
+        text: "添加常用插件入口"
+      });
+    } else {
+      selected.forEach((plugin) => {
+        const link = scroller.createEl("a", {
+          cls: "aurora-plugin-shortcut",
+          href: `obsidian://show-plugin?id=${encodeURIComponent(plugin.id)}`,
+          attr: {
+            "aria-label": `打开 ${plugin.name}`,
+            title: plugin.description || plugin.name
+          }
+        });
+        link.createSpan({
+          cls: "aurora-plugin-shortcut-mark",
+          text: pluginInitial(plugin.name)
+        });
+        link.createSpan({
+          cls: "aurora-plugin-shortcut-name",
+          text: plugin.name
+        });
+      });
+    }
+
+    const manage = this.createIconButton(section, "sliders-horizontal", "管理快捷插件");
+    manage.addClass("aurora-quick-plugins-manage");
+    this.listen(manage, "click", () => {
+      new QuickPluginModal(this.app, this.plugin).open();
     });
   }
 
@@ -256,6 +362,280 @@ export class AuroraDashboardView extends ItemView {
     );
   }
 
+  private renderTodoList(
+    surface: HTMLElement,
+    snapshot: DashboardSnapshot
+  ): void {
+    const list = surface.createDiv("aurora-todo-list");
+    const configuredPath = normalizeTodoFilePath(
+      this.plugin.data.settings.todoFilePath
+    );
+    const todos = snapshot.taskNotes.flatMap((note) =>
+      note.tasks.map((task) => ({ file: note.file, task }))
+    );
+
+    if (!configuredPath) {
+      this.renderTodoEmpty(
+        list,
+        "file-cog",
+        "尚未配置 Todo 文件",
+        "在设置中填写一个仓库内 Markdown 文件路径。"
+      );
+      return;
+    }
+
+    if (todos.length === 0) {
+      const configuredFile = this.app.vault.getAbstractFileByPath(configuredPath);
+      this.renderTodoEmpty(
+        list,
+        configuredFile instanceof TFile ? "circle-check-big" : "file-warning",
+        configuredFile instanceof TFile
+          ? "这个文件中没有未完成任务"
+          : "未找到配置的 Todo 文件",
+        configuredFile instanceof TFile ? configuredPath : `请检查路径：${configuredPath}`
+      );
+      return;
+    }
+
+    todos.slice(0, 7).forEach(({ file, task }) => {
+      const row = list.createDiv("aurora-todo-row");
+      const complete = row.createEl("button", {
+        cls: "aurora-todo-check",
+        attr: {
+          type: "button",
+          "aria-label": `完成任务：${task.text}`,
+          title: "标记为已完成"
+        }
+      });
+      setIcon(complete, "circle");
+      this.listen(complete, "click", () => {
+        void this.saveTodoUpdate(file, task, { completed: true }, complete);
+      });
+
+      const copy = row.createDiv("aurora-todo-copy");
+      const input = copy.createEl("input", {
+        cls: "aurora-todo-input",
+        value: task.text,
+        attr: {
+          type: "text",
+          "aria-label": `编辑任务：${task.text}`
+        }
+      });
+      copy.createSpan({
+        cls: "aurora-todo-path",
+        text: `${file.basename} · 第 ${task.line + 1} 行`
+      });
+      const commit = (): void => {
+        const value = input.value.trim();
+        if (!value || value === task.text) {
+          input.value = task.text;
+          return;
+        }
+        void this.saveTodoUpdate(file, task, { text: value }, input);
+      };
+      this.listen(input, "blur", commit);
+      this.listen(input, "keydown", (event) => {
+        if (event.key === "Enter") input.blur();
+        if (event.key === "Escape") {
+          input.value = task.text;
+          input.blur();
+        }
+      });
+
+      const open = this.createIconButton(row, "external-link", "打开任务笔记");
+      open.addClass("aurora-todo-open");
+      this.listen(open, "click", () => {
+        void this.app.workspace.getLeaf(false).openFile(file);
+      });
+    });
+
+    if (todos.length > 7) {
+      const more = list.createEl("button", {
+        cls: "aurora-todo-more",
+        text: `查看其余 ${todos.length - 7} 项`,
+        attr: { type: "button" }
+      });
+      this.listen(more, "click", () => {
+        this.openDetails(
+          "未完成任务",
+          "点击任务可打开对应笔记",
+          todos.map(({ file, task }) => ({
+            file,
+            title: task.text,
+            subtitle: file.path,
+            badge: `第 ${task.line + 1} 行`
+          }))
+        );
+      });
+    }
+  }
+
+  private renderTodoEmpty(
+    list: HTMLElement,
+    iconName: string,
+    title: string,
+    description: string
+  ): void {
+    const empty = list.createDiv("aurora-todo-empty");
+    const icon = empty.createSpan();
+    setIcon(icon, iconName);
+    empty.createSpan({ cls: "aurora-todo-empty-title", text: title });
+    empty.createSpan({ cls: "aurora-todo-empty-description", text: description });
+    const configure = empty.createEl("button", {
+      text: "配置 Todo 文件",
+      attr: { type: "button" }
+    });
+    this.listen(configure, "click", () => {
+      new AuroraSettingsModal(this.app, this.plugin).open();
+    });
+  }
+
+  private async saveTodoUpdate(
+    file: TFile,
+    task: OpenTask,
+    update: { completed?: boolean; text?: string },
+    control: HTMLElement
+  ): Promise<void> {
+    control.addClass("is-saving");
+    if (control instanceof HTMLInputElement || control instanceof HTMLButtonElement) {
+      control.disabled = true;
+    }
+    try {
+      await this.plugin.updateTask(file, task, update);
+      await this.refresh(true);
+    } catch (error) {
+      new Notice(
+        error instanceof Error ? error.message : "任务更新失败，请刷新后重试"
+      );
+      control.removeClass("is-saving");
+      if (
+        control instanceof HTMLInputElement ||
+        control instanceof HTMLButtonElement
+      ) {
+        control.disabled = false;
+      }
+    }
+  }
+
+  private renderGalaxyGraph(
+    surface: HTMLElement,
+    snapshot: KnowledgeGraphSnapshot
+  ): void {
+    const body = surface.createDiv("aurora-galaxy-graph");
+    if (snapshot.nodes.length === 0) {
+      body.createDiv({ cls: "aurora-empty-state", text: "还没有可展示的连接" });
+      return;
+    }
+
+    const nodes: GalaxyNode[] = snapshot.nodes.map((node) => ({
+      id: node.file.path,
+      file: node.file,
+      degree: node.degree,
+      color: galaxyColor(node.file.path),
+      val: Math.max(1.1, Math.log2(node.degree + 2))
+    }));
+    const links: GalaxyLink[] = snapshot.edges.map((edge) => ({
+      source: edge.source,
+      target: edge.target
+    }));
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
+    try {
+      const graph = new ForceGraph3D(body, {
+        controlType: "orbit",
+        rendererConfig: {
+          alpha: true,
+          antialias: true,
+          powerPreference: "high-performance"
+        }
+      }) as unknown as ForceGraph3DInstance<GalaxyNode, GalaxyLink>;
+      const focusGraph = (duration: number): void => {
+        graph.zoomToFit(0, 12);
+        const camera = graph.cameraPosition();
+        graph.cameraPosition(
+          {
+            x: camera.x * 0.5,
+            y: camera.y * 0.5,
+            z: camera.z * 0.5
+          },
+          { x: 0, y: 0, z: 0 },
+          duration
+        );
+      };
+      graph
+        .warmupTicks(70)
+        .cooldownTicks(150)
+        .graphData({ nodes, links })
+        .backgroundColor("rgba(5, 6, 18, 0.98)")
+        .showNavInfo(false)
+        .nodeId("id")
+        .nodeLabel((node) =>
+          `${escapeHtml(node.file.basename)}<br><span>${node.degree} 个连接</span>`
+        )
+        .nodeColor((node) => node.color)
+        .nodeVal((node) => node.val)
+        .nodeRelSize(3.2)
+        .nodeOpacity(0.92)
+        .nodeResolution(10)
+        .linkColor(() => "#a996ff")
+        .linkOpacity(0.46)
+        .linkWidth(0.72)
+        .linkDirectionalParticles(reduceMotion ? 0 : 1)
+        .linkDirectionalParticleColor(() => "#ff4f9a")
+        .linkDirectionalParticleWidth(1.15)
+        .linkDirectionalParticleSpeed(0.0036)
+        .onNodeClick((node) => {
+          void this.app.workspace.getLeaf(false).openFile(node.file);
+        })
+        .onEngineStop(() => focusGraph(650));
+
+      const stars = createGalaxyStars(900);
+      graph.scene().add(stars);
+      graph.cameraPosition({ z: 560 });
+
+      const resize = (): void => {
+        graph
+          .width(Math.max(300, body.clientWidth))
+          .height(Math.max(340, body.clientHeight));
+      };
+      const observer = new ResizeObserver(resize);
+      observer.observe(body);
+      resize();
+      const focusTimer = window.setTimeout(() => {
+        focusGraph(800);
+      }, 900);
+
+      let animationFrame = 0;
+      const animateStars = (): void => {
+        stars.rotation.y += 0.00045;
+        stars.rotation.x += 0.00008;
+        animationFrame = window.requestAnimationFrame(animateStars);
+      };
+      if (!reduceMotion) animateStars();
+
+      this.renderDisposers.push(() => {
+        observer.disconnect();
+        window.clearTimeout(focusTimer);
+        if (animationFrame) window.cancelAnimationFrame(animationFrame);
+        graph.scene().remove(stars);
+        stars.geometry.dispose();
+        stars.material.dispose();
+        graph._destructor();
+      });
+    } catch (error) {
+      body.empty();
+      body.createDiv({
+        cls: "aurora-empty-state",
+        text:
+          error instanceof Error
+            ? `3D 图谱加载失败：${error.message}`
+            : "3D 图谱加载失败"
+      });
+    }
+  }
+
   private renderHeatmap(
     surface: HTMLElement,
     snapshot: DashboardSnapshot
@@ -311,7 +691,7 @@ export class AuroraDashboardView extends ItemView {
 
     const legend = surface.createDiv("aurora-heatmap-legend");
     legend.createSpan({ text: "少" });
-    for (let level = 0; level <= 5; level += 1) {
+    for (let level = 1; level <= 5; level += 1) {
       const swatch = legend.createSpan("aurora-heatmap-swatch");
       swatch.dataset.level = String(level);
     }
@@ -326,9 +706,13 @@ export class AuroraDashboardView extends ItemView {
     this.createIssueRow(
       list,
       "square-check-big",
-      "未完成任务",
+      "Todo 文件未完成任务",
       snapshot.taskNotes.reduce((sum, note) => sum + note.tasks.length, 0),
       () => {
+        if (!this.plugin.data.settings.todoFilePath) {
+          new AuroraSettingsModal(this.app, this.plugin).open();
+          return;
+        }
         const items = snapshot.taskNotes.flatMap((note) =>
           note.tasks.map((task) => ({
             file: note.file,
@@ -339,7 +723,7 @@ export class AuroraDashboardView extends ItemView {
         );
         this.openDetails(
           "未完成任务",
-          "点击任务可打开对应笔记",
+          `来源：${this.plugin.data.settings.todoFilePath}`,
           items
         );
       }
@@ -644,6 +1028,19 @@ export class AuroraDashboardView extends ItemView {
   }
 }
 
+interface GalaxyNode extends NodeObject {
+  id: string;
+  file: TFile;
+  degree: number;
+  color: string;
+  val: number;
+}
+
+interface GalaxyLink extends LinkObject<GalaxyNode> {
+  source: string | GalaxyNode;
+  target: string | GalaxyNode;
+}
+
 interface ChartPoint {
   x: number;
   y: number;
@@ -651,6 +1048,68 @@ interface ChartPoint {
 
 interface ChartGeometry {
   points: ChartPoint[];
+}
+
+function createGalaxyStars(
+  count: number
+): Points<BufferGeometry, PointsMaterial> {
+  const positions: number[] = [];
+  const colors: number[] = [];
+  const palette = ["#f8f5ff", "#ff63a7", "#a884ff", "#66d9ff"];
+  let seed = 0x51f15e;
+  const random = (): number => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 0x100000000;
+  };
+
+  for (let index = 0; index < count; index += 1) {
+    const radius = 250 + random() * 850;
+    const theta = random() * Math.PI * 2;
+    const phi = Math.acos(2 * random() - 1);
+    positions.push(
+      radius * Math.sin(phi) * Math.cos(theta),
+      radius * Math.sin(phi) * Math.sin(theta),
+      radius * Math.cos(phi)
+    );
+    const color = new Color(palette[Math.floor(random() * palette.length)]);
+    colors.push(color.r, color.g, color.b);
+  }
+
+  const geometry = new BufferGeometry();
+  geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("color", new Float32BufferAttribute(colors, 3));
+  const material = new PointsMaterial({
+    size: 1.65,
+    transparent: true,
+    opacity: 0.78,
+    vertexColors: true,
+    blending: AdditiveBlending,
+    depthWrite: false
+  });
+  return new Points(geometry, material);
+}
+
+function galaxyColor(path: string): string {
+  const palette = ["#ff4f9a", "#b78cff", "#6dd6ff", "#f4a4d2", "#f7d76d"];
+  return palette[stableHash(path) % palette.length]!;
+}
+
+function stableHash(value: string): number {
+  let hash = 2166136261;
+  for (const character of value) {
+    hash ^= character.codePointAt(0) ?? 0;
+    hash = Math.imul(hash, 16777619);
+  }
+  return Math.abs(hash);
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/gu, "&amp;")
+    .replace(/</gu, "&lt;")
+    .replace(/>/gu, "&gt;")
+    .replace(/"/gu, "&quot;")
+    .replace(/'/gu, "&#039;");
 }
 
 function drawTrendChart(

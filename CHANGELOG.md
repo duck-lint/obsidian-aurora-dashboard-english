@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0
+
+- Rename the displayed plugin to Dashboard and add a horizontally scrollable, manually ordered plugin shortcut strip.
+- Add an editable Todo card that reads only one explicitly configured Markdown file and remains empty by default.
+- Add an interactive animated 3D galaxy knowledge graph with clearer links, moving particles, note tooltips, and clickable nodes.
+- Keep the Todo and knowledge graph cards equally sized, with a square graph viewport and a closer initial camera position.
+- Redesign the writing activity calendar as a full-width row with seamless rose-colored cells and a compact dark-to-light legend.
+- Update the project preview image to show the new Dashboard layout and 3D knowledge graph.
+
 ## 0.1.2
 
 - Add searchable declarative settings for Obsidian 1.13 while preserving the legacy settings view for older supported versions.

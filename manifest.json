@@ -1,9 +1,9 @@
 {
   "id": "aurora-dashboard",
-  "name": "Aurora Dashboard",
-  "version": "0.1.2",
+  "name": "Dashboard",
+  "version": "0.2.0",
   "minAppVersion": "1.8.7",
-  "description": "A calm home dashboard for vault health, writing activity, recent notes, and actionable details.",
+  "description": "An interactive home dashboard for tasks, knowledge graph, plugins, vault health, and writing activity.",
   "author": "Sean",
   "authorUrl": "https://github.com/tianxiangyu0717-hub",
   "isDesktopOnly": false

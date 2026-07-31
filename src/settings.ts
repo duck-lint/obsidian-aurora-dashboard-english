@@ -7,11 +7,13 @@ import {
 import type { App, SettingDefinitionItem } from "obsidian";
 import type AuroraDashboardPlugin from "./main";
 import type { StartupMode } from "./models";
+import { normalizeTodoFilePath } from "./core";
 
 type AuroraSettingKey =
   | "displayName"
   | "openOnStartup"
   | "startupMode"
+  | "todoFilePath"
   | "shortNoteWordThreshold"
   | "excludedFolders"
   | "showEstimatedHistory"
@@ -43,7 +45,7 @@ export class AuroraSettingTab extends PluginSettingTab {
       },
       {
         name: "启动时打开首页",
-        desc: "Obsidian 工作区加载完成后自动显示 Aurora Dashboard。",
+        desc: "Obsidian 工作区加载完成后自动显示 Dashboard。",
         control: {
           type: "toggle",
           key: "openOnStartup",
@@ -61,6 +63,16 @@ export class AuroraSettingTab extends PluginSettingTab {
             "replace-active": "替换当前标签",
             "new-tab": "在新标签打开"
           }
+        }
+      },
+      {
+        name: "Todo 文件路径",
+        desc: "留空时 Todo 模块为空；填写一个仓库内 Markdown 文件的相对路径后，只读取该文件中的未完成任务。",
+        control: {
+          type: "text",
+          key: "todoFilePath",
+          defaultValue: "",
+          placeholder: "例如 Todo.md 或 工作/Todo.md"
         }
       },
       {
@@ -122,6 +134,8 @@ export class AuroraSettingTab extends PluginSettingTab {
         return settings.openOnStartup;
       case "startupMode":
         return settings.startupMode;
+      case "todoFilePath":
+        return settings.todoFilePath;
       case "shortNoteWordThreshold":
         return settings.shortNoteWordThreshold;
       case "excludedFolders":
@@ -148,6 +162,11 @@ export class AuroraSettingTab extends PluginSettingTab {
       case "startupMode":
         if (value === "replace-active" || value === "new-tab") {
           settings.startupMode = value;
+        }
+        break;
+      case "todoFilePath":
+        if (typeof value === "string") {
+          settings.todoFilePath = normalizeTodoFilePath(value);
         }
         break;
       case "shortNoteWordThreshold":
@@ -202,7 +221,7 @@ function renderSettings(
   close?: () => void
 ): void {
   container.empty();
-  container.createEl("h2", { text: "Aurora Dashboard 设置" });
+  container.createEl("h2", { text: "Dashboard 设置" });
   container.createEl("p", {
     cls: "setting-item-description aurora-settings-intro",
     text: "所有统计与活动记录都只保存在当前仓库，不会发送到网络。"
@@ -223,7 +242,7 @@ function renderSettings(
 
   new Setting(container)
     .setName("启动时打开首页")
-    .setDesc("Obsidian 工作区加载完成后自动显示 Aurora Dashboard。")
+    .setDesc("Obsidian 工作区加载完成后自动显示 Dashboard。")
     .addToggle((toggle) =>
       toggle
         .setValue(plugin.data.settings.openOnStartup)
@@ -243,6 +262,21 @@ function renderSettings(
         .setValue(plugin.data.settings.startupMode)
         .onChange(async (value) => {
           plugin.data.settings.startupMode = value as StartupMode;
+          await plugin.saveSettings();
+        })
+    );
+
+  new Setting(container)
+    .setName("Todo 文件路径")
+    .setDesc(
+      "留空时 Todo 模块为空；填写仓库内 Markdown 文件的相对路径后，只读取该文件中的未完成任务。"
+    )
+    .addText((text) =>
+      text
+        .setPlaceholder("例如 Todo.md 或 工作/Todo.md")
+        .setValue(plugin.data.settings.todoFilePath)
+        .onChange(async (value) => {
+          plugin.data.settings.todoFilePath = normalizeTodoFilePath(value);
           await plugin.saveSettings();
         })
     );

@@ -10,6 +10,9 @@ export interface AuroraSettings {
   excludedFolders: string[];
   showEstimatedHistory: boolean;
   activityHistoryDays: number;
+  todoFilePath: string;
+  quickPluginIds: string[];
+  quickPluginsInitialized: boolean;
 }
 
 export interface ActivityEntry {
@@ -28,6 +31,28 @@ export interface AuroraPluginData {
 export interface OpenTask {
   line: number;
   text: string;
+  raw: string;
+}
+
+export interface InstalledPlugin {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface KnowledgeGraphNode {
+  file: TFile;
+  degree: number;
+}
+
+export interface KnowledgeGraphEdge {
+  source: string;
+  target: string;
+}
+
+export interface KnowledgeGraphSnapshot {
+  nodes: KnowledgeGraphNode[];
+  edges: KnowledgeGraphEdge[];
 }
 
 export interface NoteMetric {
@@ -67,6 +92,7 @@ export interface DashboardSnapshot {
   activity: DailyActivity[];
   trend: DailyActivity[];
   folders: FolderSummary[];
+  graph: KnowledgeGraphSnapshot;
 }
 
 export interface AuroraDataStore {
@@ -81,7 +107,10 @@ export const DEFAULT_SETTINGS: AuroraSettings = {
   shortNoteWordThreshold: 10,
   excludedFolders: [],
   showEstimatedHistory: true,
-  activityHistoryDays: 365
+  activityHistoryDays: 365,
+  todoFilePath: "",
+  quickPluginIds: [],
+  quickPluginsInitialized: false
 };
 
 export const DEFAULT_DATA: AuroraPluginData = {

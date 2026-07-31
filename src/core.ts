@@ -1,5 +1,15 @@
 import type { OpenTask } from "./models";
 
+export function normalizeTodoFilePath(value: string): string {
+  const path = value
+    .trim()
+    .replace(/^[/\\]+/u, "")
+    .replace(/\\/gu, "/")
+    .replace(/\/{2,}/gu, "/");
+  if (!path) return "";
+  return /\.md$/iu.test(path) ? path : `${path}.md`;
+}
+
 const CJK_PATTERN =
   /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af]/gu;
 const WORD_PATTERN = /[\p{L}\p{N}]+(?:['’_-][\p{L}\p{N}]+)*/gu;
@@ -35,11 +45,38 @@ export function extractOpenTasks(markdown: string): OpenTask[] {
     const match = line.match(/^\s*[-*+]\s+\[\s\]\s+(.+?)\s*$/u);
     const text = match?.[1];
     if (text) {
-      tasks.push({ line: index, text });
+      tasks.push({ line: index, text, raw: line });
     }
   });
 
   return tasks;
+}
+
+export function updateMarkdownTask(
+  markdown: string,
+  task: OpenTask,
+  update: { completed?: boolean; text?: string }
+): string {
+  const lines = markdown.split(/\r?\n/u);
+  const index =
+    lines[task.line] === task.raw ? task.line : lines.indexOf(task.raw);
+  if (index < 0) {
+    throw new Error("任务所在行已经发生变化，请刷新后重试");
+  }
+
+  const current = lines[index];
+  const match = current?.match(/^(\s*[-*+]\s+\[)([ xX])(\]\s+)(.*)$/u);
+  if (!match) {
+    throw new Error("目标内容已经不再是 Markdown 任务");
+  }
+
+  const nextText = update.text === undefined ? match[4] : update.text.trim();
+  if (!nextText) {
+    throw new Error("任务内容不能为空");
+  }
+  const state = update.completed === undefined ? match[2] : update.completed ? "x" : " ";
+  lines[index] = `${match[1]}${state}${match[3]}${nextText}`;
+  return lines.join(markdown.includes("\r\n") ? "\r\n" : "\n");
 }
 
 export function localDateKey(value: Date | number): string {

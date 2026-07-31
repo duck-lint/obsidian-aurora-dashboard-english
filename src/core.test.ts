@@ -5,7 +5,9 @@ import {
   dayKeysEndingToday,
   extractOpenTasks,
   formatCompactNumber,
-  localDateKey
+  localDateKey,
+  normalizeTodoFilePath,
+  updateMarkdownTask
 } from "./core";
 
 describe("countWords", () => {
@@ -34,9 +36,39 @@ describe("extractOpenTasks", () => {
   it("finds only unchecked markdown tasks", () => {
     const tasks = extractOpenTasks("- [ ] First\n- [x] Done\n  * [ ] 第二项");
     expect(tasks).toEqual([
-      { line: 0, text: "First" },
-      { line: 2, text: "第二项" }
+      { line: 0, text: "First", raw: "- [ ] First" },
+      { line: 2, text: "第二项", raw: "  * [ ] 第二项" }
     ]);
+  });
+
+  it("edits and completes the original task line", () => {
+    const source = "Intro\n- [ ] First task\nOutro";
+    const task = extractOpenTasks(source)[0];
+    expect(task).toBeDefined();
+    const edited = updateMarkdownTask(source, task!, { text: "Edited task" });
+    const editedTask = extractOpenTasks(edited)[0];
+    expect(editedTask).toBeDefined();
+    expect(updateMarkdownTask(edited, editedTask!, { completed: true })).toBe(
+      "Intro\n- [x] Edited task\nOutro"
+    );
+  });
+
+  it("refuses to overwrite a task when its source line disappeared", () => {
+    const task = extractOpenTasks("- [ ] Original")[0];
+    expect(task).toBeDefined();
+    expect(() =>
+      updateMarkdownTask("- [ ] Replaced", task!, { text: "Edited" })
+    ).toThrow("任务所在行已经发生变化");
+  });
+});
+
+describe("normalizeTodoFilePath", () => {
+  it("adds a Markdown extension and normalizes common separators", () => {
+    expect(normalizeTodoFilePath("/日记/2026-08-01")).toBe(
+      "日记/2026-08-01.md"
+    );
+    expect(normalizeTodoFilePath("工作\\Todo.md")).toBe("工作/Todo.md");
+    expect(normalizeTodoFilePath("  ")).toBe("");
   });
 });
 

@@ -4,7 +4,8 @@ import {
   countWords,
   dayKeysEndingToday,
   extractOpenTasks,
-  localDateKey
+  localDateKey,
+  normalizeTodoFilePath
 } from "./core";
 import type {
   ActivityEntry,
@@ -12,6 +13,7 @@ import type {
   DailyActivity,
   DashboardSnapshot,
   FolderSummary,
+  KnowledgeGraphSnapshot,
   NoteMetric,
   OpenTask
 } from "./models";
@@ -163,7 +165,8 @@ export class StatsService {
       modifiedToday,
       activity,
       trend: activity.slice(-30),
-      folders: this.buildFolderSummaries(notes)
+      folders: this.buildFolderSummaries(notes),
+      graph: this.buildKnowledgeGraph(notes)
     };
   }
 
@@ -191,10 +194,18 @@ export class StatsService {
       mtime: file.stat.mtime,
       size: file.stat.size,
       words: countWords(content),
-      tasks: extractOpenTasks(content)
+      tasks: this.isTodoFile(file) ? extractOpenTasks(content) : []
     };
     this.metricCache.set(file.path, metric);
     return metric;
+  }
+
+  private isTodoFile(file: TFile): boolean {
+    const configuredPath = normalizeTodoFilePath(
+      this.store.data.settings.todoFilePath
+    );
+    if (!configuredPath) return false;
+    return file.path === configuredPath;
   }
 
   private buildBacklinkCounts(files: TFile[]): Map<string, number> {
@@ -290,6 +301,35 @@ export class StatsService {
       .filter((folder) => folder.noteCount > 0)
       .sort((left, right) => right.noteCount - left.noteCount);
   }
+
+  private buildKnowledgeGraph(notes: NoteMetric[]): KnowledgeGraphSnapshot {
+    const includedPaths = new Set(notes.map((note) => note.file.path));
+    const degree = new Map<string, number>();
+    const edges = new Map<string, { source: string; target: string }>();
+
+    Object.entries(this.app.metadataCache.resolvedLinks).forEach(
+      ([source, targets]) => {
+        if (!includedPaths.has(source)) return;
+        Object.keys(targets).forEach((target) => {
+          if (!includedPaths.has(target) || source === target) return;
+          const key = `${source}\u0000${target}`;
+          if (edges.has(key)) return;
+          edges.set(key, { source, target });
+          degree.set(source, (degree.get(source) ?? 0) + 1);
+          degree.set(target, (degree.get(target) ?? 0) + 1);
+        });
+      }
+    );
+
+    return {
+      nodes: notes.map((note) => ({
+        file: note.file,
+        degree: degree.get(note.file.path) ?? 0
+      })),
+      edges: [...edges.values()]
+    };
+  }
+
 }
 
 function compareByModifiedDescending(
