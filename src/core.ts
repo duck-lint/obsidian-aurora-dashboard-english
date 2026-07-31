@@ -77,13 +77,16 @@ export function activityLevel(value: number, max: number): number {
 }
 
 export function formatCompactNumber(value: number): string {
-  if (value >= 100_000_000) {
-    return `${trimDecimal(value / 100_000_000)} 亿`;
+  if (value >= 1_000_000_000) {
+    return `${trimDecimal(value / 1_000_000_000)}B`;
   }
-  if (value >= 10_000) {
-    return `${trimDecimal(value / 10_000)} 万`;
+  if (value >= 1_000_000) {
+    return `${trimDecimal(value / 1_000_000)}M`;
   }
-  return new Intl.NumberFormat("zh-CN").format(value);
+  if (value >= 1_000) {
+    return `${trimDecimal(value / 1_000)}K`;
+  }
+  return new Intl.NumberFormat("en-CA").format(value);
 }
 
 function trimDecimal(value: number): string {

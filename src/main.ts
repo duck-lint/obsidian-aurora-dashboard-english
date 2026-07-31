@@ -27,23 +27,23 @@ export default class AuroraDashboardPlugin extends Plugin {
       (leaf) => new AuroraDashboardView(leaf, this)
     );
 
-    this.addRibbonIcon("layout-dashboard", "打开 Aurora Dashboard", () => {
+    this.addRibbonIcon("layout-dashboard", "Open Aurora Dashboard", () => {
       void this.openDashboard("new-tab");
     });
 
     this.addCommand({
       id: "open-dashboard",
-      name: "打开首页看板",
+      name: "Open dashboard",
       callback: () => void this.openDashboard("new-tab")
     });
 
     this.addCommand({
       id: "refresh-dashboard",
-      name: "重新扫描首页统计",
+      name: "Refresh dashboard statistics",
       callback: () => {
         this.stats.invalidate();
         this.refreshDashboardViews(true);
-        new Notice("Aurora Dashboard 正在重新扫描");
+        new Notice("Aurora Dashboard is refreshing");
       }
     });
 

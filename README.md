@@ -4,8 +4,8 @@ A calm, zero-config home dashboard for Obsidian. Aurora Dashboard turns the
 current vault into a clickable overview of writing activity, note health,
 unfinished work, recent notes, and top-level folders.
 
-The interface is written in Chinese and uses a Nord-inspired visual language.
-All analysis runs locally inside Obsidian.
+This repository is an English-language fork maintained by `duck-lint`, with a
+Nord-inspired visual language. All analysis runs locally inside Obsidian.
 
 ![Aurora Dashboard preview with example data](docs/aurora-dashboard-preview.png)
 
@@ -65,8 +65,8 @@ and choose **Add to Obsidian**.
 
 ## Commands
 
-- **Aurora Dashboard: 打开首页看板**
-- **Aurora Dashboard: 重新扫描首页统计**
+- **Aurora Dashboard: Open dashboard**
+- **Aurora Dashboard: Refresh dashboard statistics**
 
 The ribbon dashboard icon also opens the view.
 
@@ -111,7 +111,13 @@ bundle.
 6. Submit the repository through the
    [Obsidian Community plugin submission process](https://docs.obsidian.md/Plugins/Releasing/Submit+your+plugin).
 
-Repository: [tianxiangyu0717-hub/obsidian-aurora-dashboard](https://github.com/tianxiangyu0717-hub/obsidian-aurora-dashboard)
+This fork is not an official upstream translation. It preserves the original
+plugin ID, settings keys, saved-data schema, view type, command IDs, CSS class
+names, vault statistics, activity history, and minimum Obsidian version.
+
+Upstream project: [tianxiangyu0717-hub/obsidian-aurora-dashboard](https://github.com/tianxiangyu0717-hub/obsidian-aurora-dashboard)
+
+English fork: [duck-lint/obsidian-aurora-dashboard](https://github.com/duck-lint/obsidian-aurora-dashboard)
 
 ## Compatibility
 
@@ -128,4 +134,4 @@ that theme.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). Original project and author attribution are preserved.
