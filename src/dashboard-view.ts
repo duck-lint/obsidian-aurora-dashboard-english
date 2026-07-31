@@ -410,8 +410,10 @@ export class AuroraDashboardView extends ItemView {
       tooltip.createSpan({
         text: `${new Intl.NumberFormat("zh-CN").format(day.addedWords)} 字`
       });
-      tooltip.style.left = `${Math.min(rect.width - 120, Math.max(8, point.x - 42))}px`;
-      tooltip.style.top = `${Math.max(8, point.y - 54)}px`;
+      tooltip.setCssProps({
+        "--aurora-tooltip-left": `${Math.min(rect.width - 120, Math.max(8, point.x - 42))}px`,
+        "--aurora-tooltip-top": `${Math.max(8, point.y - 54)}px`
+      });
       tooltip.show();
     });
     this.listen(canvas, "mouseleave", () => tooltip.hide());
@@ -503,7 +505,9 @@ export class AuroraDashboardView extends ItemView {
       const bar = copy.createSpan("aurora-structure-bar");
       const fill = bar.createSpan("aurora-structure-bar-fill");
       fill.dataset.color = String((index % 5) + 1);
-      fill.style.width = `${Math.max(3, (folder.noteCount / maxCount) * 100)}%`;
+      fill.setCssProps({
+        "--aurora-structure-fill-width": `${Math.max(3, (folder.noteCount / maxCount) * 100)}%`
+      });
       row.createSpan({
         cls: "aurora-structure-words",
         text: `${formatCompactNumber(folder.wordCount)} 字`

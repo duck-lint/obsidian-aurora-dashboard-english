@@ -65,7 +65,6 @@ export default class AuroraDashboardPlugin extends Plugin {
       this.saveTimer = null;
       void this.saveData(this.data);
     }
-    this.app.workspace.detachLeavesOfType(VIEW_TYPE_AURORA_DASHBOARD);
   }
 
   async openDashboard(

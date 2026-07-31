@@ -487,6 +487,8 @@
 
 .aurora-chart-tooltip {
   position: absolute;
+  top: var(--aurora-tooltip-top, 8px);
+  left: var(--aurora-tooltip-left, 8px);
   z-index: 2;
   display: flex;
   min-width: 98px;
@@ -674,6 +676,7 @@
 
 .aurora-structure-bar-fill {
   display: block;
+  width: var(--aurora-structure-fill-width, 3%);
   height: 100%;
   border-radius: inherit;
   background: var(--aurora-accent-blue);
