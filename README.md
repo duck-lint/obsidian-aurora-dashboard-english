@@ -124,8 +124,6 @@ The GitHub Actions workflow runs the same checks on pull requests and pushes to
 4. Push a Git tag exactly equal to the manifest version, without a `v` prefix.
 5. The included GitHub Action publishes `main.js`, `manifest.json`, and
    `styles.css` as release assets.
-6. Submit the repository through the
-   [Obsidian Community plugin submission process](https://docs.obsidian.md/Plugins/Releasing/Submit+your+plugin).
 
 This fork is not an official upstream translation. It preserves the original
 plugin ID, settings keys, saved-data schema, view type, command IDs, CSS class
