@@ -7,7 +7,7 @@ activity, note health, installed plugins, recent notes, and top-level folders.
 This repository is an English-language fork maintained by `duck-lint`, with a
 Nord-inspired visual language. All analysis runs locally inside Obsidian.
 
-![Dashboard preview with Todo, plugin shortcuts, writing activity, and an interactive 3D galaxy knowledge graph](docs/aurora-dashboard-preview.png)
+<img width="1260" height="1439" alt="image" src="https://github.com/user-attachments/assets/2280f644-e3e3-4db9-b90d-1aebdc7c392d" />
 
 ## What it shows
 
@@ -133,7 +133,7 @@ names, vault statistics, activity history, and minimum Obsidian version.
 
 Upstream project: [tianxiangyu0717-hub/obsidian-aurora-dashboard](https://github.com/tianxiangyu0717-hub/obsidian-aurora-dashboard)
 
-English fork: [duck-lint/obsidian-aurora-dashboard](https://github.com/duck-lint/obsidian-aurora-dashboard)
+English fork: [duck-lint/obsidian-aurora-dashboard](https://github.com/duck-lint/obsidian-aurora-dashboard-english)
 
 ## Compatibility
 
