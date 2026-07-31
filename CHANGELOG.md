@@ -1,5 +1,17 @@
 # Changelog
 
+## English fork 0.2.1
+
+- Port the upstream 0.2.1 responsive layout patch while preserving the English interface, validation, and CI.
+
+## 0.2.1
+
+- Place Todo, Knowledge Graph, and Writing Activity in one responsive three-card row.
+- Center the Todo empty state within the complete card body.
+- Use a closer initial graph scale.
+- Remove axes from the daily activity matrix.
+- Expand the activity matrix with subtle day-cell borders.
+
 ## English fork 0.2.0
 
 - Translate the complete Dashboard 0.2.0 interface and presentation formatting to English.
