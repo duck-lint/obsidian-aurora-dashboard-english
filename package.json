@@ -1,6 +1,6 @@
 {
   "name": "obsidian-aurora-dashboard",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A zero-config Obsidian home dashboard for vault health, writing activity, recent notes, and actionable details.",
   "main": "main.js",
   "type": "module",

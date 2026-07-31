@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2
+
+- Add searchable declarative settings for Obsidian 1.13 while preserving the legacy settings view for older supported versions.
+- Remove a deprecated slider tooltip API and avoid a false-positive CSS compatibility warning.
+- Generate release notes and publish GitHub build-provenance attestations for release assets.
+
 ## 0.1.1
 
 - Preserve open dashboard leaves when the plugin unloads so Obsidian can restore them after updates.

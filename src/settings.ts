@@ -4,9 +4,18 @@ import {
   Setting,
   normalizePath
 } from "obsidian";
-import type { App } from "obsidian";
+import type { App, SettingDefinitionItem } from "obsidian";
 import type AuroraDashboardPlugin from "./main";
 import type { StartupMode } from "./models";
+
+type AuroraSettingKey =
+  | "displayName"
+  | "openOnStartup"
+  | "startupMode"
+  | "shortNoteWordThreshold"
+  | "excludedFolders"
+  | "showEstimatedHistory"
+  | "activityHistoryDays";
 
 export class AuroraSettingTab extends PluginSettingTab {
   constructor(
@@ -18,6 +27,154 @@ export class AuroraSettingTab extends PluginSettingTab {
 
   display(): void {
     renderSettings(this.containerEl, this.auroraPlugin);
+  }
+
+  getSettingDefinitions(): SettingDefinitionItem<AuroraSettingKey>[] {
+    return [
+      {
+        name: "问候名称",
+        desc: "可选。留空时首页只显示时段问候。",
+        control: {
+          type: "text",
+          key: "displayName",
+          defaultValue: "",
+          placeholder: "例如 Sean"
+        }
+      },
+      {
+        name: "启动时打开首页",
+        desc: "Obsidian 工作区加载完成后自动显示 Aurora Dashboard。",
+        control: {
+          type: "toggle",
+          key: "openOnStartup",
+          defaultValue: true
+        }
+      },
+      {
+        name: "启动方式",
+        desc: "替换当前标签更像默认首页；新标签会保留上次打开的笔记。",
+        control: {
+          type: "dropdown",
+          key: "startupMode",
+          defaultValue: "replace-active",
+          options: {
+            "replace-active": "替换当前标签",
+            "new-tab": "在新标签打开"
+          }
+        }
+      },
+      {
+        name: "空白或极短阈值",
+        desc: "字数小于或等于该值时，归入“空白或极短”。",
+        control: {
+          type: "slider",
+          key: "shortNoteWordThreshold",
+          defaultValue: 10,
+          min: 0,
+          max: 100,
+          step: 5
+        }
+      },
+      {
+        name: "排除文件夹",
+        desc: "每行一个仓库相对路径；其子目录也会被排除。",
+        control: {
+          type: "textarea",
+          key: "excludedFolders",
+          defaultValue: "",
+          placeholder: "模板\n归档/附件",
+          rows: 4
+        }
+      },
+      {
+        name: "显示估算历史",
+        desc: "安装前无法精确还原每日输入量；开启后会按文件当前字数和最后修改日期估算。",
+        control: {
+          type: "toggle",
+          key: "showEstimatedHistory",
+          defaultValue: true
+        }
+      },
+      {
+        name: "活动日历范围",
+        desc: "控制首页热力日历的统计天数。",
+        control: {
+          type: "dropdown",
+          key: "activityHistoryDays",
+          defaultValue: "365",
+          options: {
+            "90": "最近 90 天",
+            "180": "最近 180 天",
+            "365": "最近 365 天"
+          }
+        }
+      }
+    ];
+  }
+
+  getControlValue(key: string): unknown {
+    const settings = this.auroraPlugin.data.settings;
+
+    switch (key as AuroraSettingKey) {
+      case "displayName":
+        return settings.displayName;
+      case "openOnStartup":
+        return settings.openOnStartup;
+      case "startupMode":
+        return settings.startupMode;
+      case "shortNoteWordThreshold":
+        return settings.shortNoteWordThreshold;
+      case "excludedFolders":
+        return settings.excludedFolders.join("\n");
+      case "showEstimatedHistory":
+        return settings.showEstimatedHistory;
+      case "activityHistoryDays":
+        return String(settings.activityHistoryDays);
+      default:
+        return undefined;
+    }
+  }
+
+  async setControlValue(key: string, value: unknown): Promise<void> {
+    const settings = this.auroraPlugin.data.settings;
+
+    switch (key as AuroraSettingKey) {
+      case "displayName":
+        if (typeof value === "string") settings.displayName = value.trim();
+        break;
+      case "openOnStartup":
+        if (typeof value === "boolean") settings.openOnStartup = value;
+        break;
+      case "startupMode":
+        if (value === "replace-active" || value === "new-tab") {
+          settings.startupMode = value;
+        }
+        break;
+      case "shortNoteWordThreshold":
+        if (typeof value === "number" && Number.isFinite(value)) {
+          settings.shortNoteWordThreshold = Math.min(100, Math.max(0, value));
+        }
+        break;
+      case "excludedFolders":
+        if (typeof value === "string") {
+          settings.excludedFolders = parseExcludedFolders(value);
+        }
+        break;
+      case "showEstimatedHistory":
+        if (typeof value === "boolean") settings.showEstimatedHistory = value;
+        break;
+      case "activityHistoryDays": {
+        const days = Number(value);
+        if (days === 90 || days === 180 || days === 365) {
+          settings.activityHistoryDays = days;
+        }
+        break;
+      }
+      default:
+        return;
+    }
+
+    await this.auroraPlugin.saveSettings();
   }
 }
 
@@ -96,7 +253,6 @@ function renderSettings(
     .addSlider((slider) =>
       slider
         .setLimits(0, 100, 5)
-        .setDynamicTooltip()
         .setValue(plugin.data.settings.shortNoteWordThreshold)
         .onChange(async (value) => {
           plugin.data.settings.shortNoteWordThreshold = value;
@@ -112,10 +268,7 @@ function renderSettings(
         .setPlaceholder("模板\n归档/附件")
         .setValue(plugin.data.settings.excludedFolders.join("\n"))
         .onChange(async (value) => {
-          plugin.data.settings.excludedFolders = value
-            .split(/\r?\n/u)
-            .map((path) => normalizePath(path.trim()))
-            .filter(Boolean);
+          plugin.data.settings.excludedFolders = parseExcludedFolders(value);
           await plugin.saveSettings();
         });
       text.inputEl.rows = 4;
@@ -159,4 +312,11 @@ function renderSettings(
     });
     done.addEventListener("click", close);
   }
+}
+
+function parseExcludedFolders(value: string): string[] {
+  return value
+    .split(/\r?\n/u)
+    .map((path) => normalizePath(path.trim()))
+    .filter(Boolean);
 }
