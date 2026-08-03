@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   activityLevel,
+  buildCumulativeLinkHistory,
   countWords,
   dayKeysEndingToday,
   extractOpenTasks,
@@ -97,5 +98,20 @@ describe("date and presentation helpers", () => {
     expect(formatCompactNumber(1_250_000)).toBe("1.25M");
     expect(formatCompactNumber(1_250_000_000)).toBe("1.25B");
     expect(formatCompactNumber(368)).toBe("368");
+  });
+
+  it("combines estimated link history with exact daily snapshots", () => {
+    expect(
+      buildCumulativeLinkHistory(
+        ["2026-07-30", "2026-07-31", "2026-08-01"],
+        ["2026-07-29", "2026-07-30", "2026-07-31"],
+        { "2026-08-01": 5 },
+        new Date(2026, 7, 1).getTime()
+      )
+    ).toEqual([
+      { date: "2026-07-30", count: 2, estimated: true },
+      { date: "2026-07-31", count: 3, estimated: true },
+      { date: "2026-08-01", count: 5, estimated: false }
+    ]);
   });
 });
