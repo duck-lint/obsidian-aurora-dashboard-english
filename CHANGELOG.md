@@ -1,21 +1,30 @@
 # Changelog
 
-## English fork 0.2.1
+## 0.3.2
 
-- Port the upstream 0.2.1 responsive layout patch while preserving the English interface, validation, and CI.
+- Replace the secondary WebGL knowledge-graph renderer with an interactive Canvas-based renderer to avoid GPU-context conflicts with Obsidian's native graph.
+- Remove the no-longer-needed 3D graph dependencies and add a regression test for GPU isolation.
+
+## 0.3.1
+
+- Reuse the existing 3D knowledge-graph renderer while its topology is unchanged, preventing repeated Dashboard scans from exhausting WebGL contexts.
+- Dispose Dashboard graph resources safely without forcing context loss that could disturb Obsidian's built-in graph renderer.
+- Fall back to an interactive 2D canvas graph with clickable notes and a retry control when WebGL is unavailable.
+
+## 0.3.0
+
+- Add a fourth focus module for the cumulative resolved-link count over the latest 365 days.
+- Render the link history as an interactive line-area chart with date, count, and estimate provenance on hover.
+- Store exact daily link-count snapshots locally from the first scan onward and transparently estimate earlier history from source-note modification dates.
+- Show Todo, Knowledge Graph, Writing Activity, and Link Count in one four-column row on wide panes and a responsive two-by-two grid on narrow panes.
 
 ## 0.2.1
 
-- Place Todo, Knowledge Graph, and Writing Activity in one responsive three-card row.
+- Place Todo, Knowledge Graph, and Writing Activity in one responsive, edge-aligned three-card row.
 - Center the Todo empty state within the complete card body.
-- Use a closer initial graph scale.
-- Remove axes from the daily activity matrix.
-- Expand the activity matrix with subtle day-cell borders.
-
-## English fork 0.2.0
-
-- Translate the complete Dashboard 0.2.0 interface and presentation formatting to English.
-- Add scoped interface validation and pull-request/default-branch CI with a downloadable installable build artifact.
+- Increase the knowledge graph's initial apparent scale and preserve clearer visible connections.
+- Combine the past 12 months into one axis-free daily activity matrix.
+- Expand the activity matrix to fill its card and add subtle light-gray borders to every day cell.
 
 ## 0.2.0
 
