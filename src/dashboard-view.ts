@@ -886,7 +886,7 @@ export class AuroraDashboardView extends ItemView {
       if (day.estimated) {
         tooltip.createSpan({
           cls: "aurora-chart-tooltip-source",
-          text: "Estimated from source-note modification dates"
+          text: "Estimated from source-note creation dates"
         });
       }
       tooltip.setCssProps({
@@ -900,7 +900,7 @@ export class AuroraDashboardView extends ItemView {
     chartWrap.createDiv({
       cls: "aurora-link-chart-note",
       text: history.some((day) => day.estimated)
-        ? "History estimated from source-note modification dates"
+        ? "History estimated from source-note creation dates"
         : "Exact daily snapshots"
     });
   }
