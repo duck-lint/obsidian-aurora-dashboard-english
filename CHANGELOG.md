@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.3
+
+- Restore pre-install writing history across the full 365-day view by estimating from note creation dates instead of last-modified dates.
+- Estimate cumulative historical links from source-note creation dates so sync or bulk edits do not collapse older history into the latest month.
+- Keep exact daily activity and link snapshots after tracking begins.
+
 ## 0.3.2
 
 - Replace the secondary WebGL knowledge-graph renderer with an interactive Canvas-based renderer to avoid GPU-context conflicts with Obsidian's native graph.

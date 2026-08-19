@@ -100,7 +100,7 @@ export class AuroraSettingTab extends PluginSettingTab {
       },
       {
         name: "Show estimated history",
-        desc: "Daily activity before installation cannot be recovered exactly; when enabled, it is estimated from current word counts and modification dates.",
+        desc: "Daily activity before installation cannot be recovered exactly; when enabled, it is estimated from current word counts and creation dates.",
         control: {
           type: "toggle",
           key: "showEstimatedHistory",
@@ -311,7 +311,7 @@ function renderSettings(
   new Setting(container)
     .setName("Show estimated history")
     .setDesc(
-      "Daily activity before installation cannot be recovered exactly; when enabled, it is estimated from current word counts and modification dates."
+      "Daily activity before installation cannot be recovered exactly; when enabled, it is estimated from current word counts and creation dates."
     )
     .addToggle((toggle) =>
       toggle
